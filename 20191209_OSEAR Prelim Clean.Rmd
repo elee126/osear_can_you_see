@@ -37,10 +37,17 @@ options(qwraps2_markup = "markdown")
 ## Read in the 6mo data
 ```{r reading_data, results="hide"}
 
-data6 <- read_csv(here::here("Data", "20191212_OSEAR 6mo prelim data.csv"))
+data6 <- read_csv(here::here("Data", "20200311_OSEAR Prelim 6mo data.csv"))
 codebook6 <- read_csv(here::here("Data", "20191213_OSEAR 6mo prelim codebook.csv"))
 
 colnames(data6) <- colnames(codebook6)
+
+data6 <- data6 %>% 
+  dplyr::rename(phonecontact = Colname)
+
+# Select completed cases + rename random column
+data <- data6 %>% 
+  filter(done == 1) 
 
 ```
 
@@ -48,20 +55,20 @@ colnames(data6) <- colnames(codebook6)
 ```{r relabel}
 
 # Old school mutate way 
-data6 <- data6 %>% 
-  mutate(1_qol = ifelse(1_qol == 1, "Very poor", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 2, "Poor", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 3, "Neither poor nor good", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 4, "Good", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 5, "Very good", 1_qol)) %>% 
-  mutate(1_sat = ifelse(1_sat == 1, "Very poor", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 2, "Poor", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 3, "Neither poor nor good", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 4, "Good", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 5, "Very good", 1_sat)) 
+data <- data %>% 
+  mutate(qol = ifelse(qol == 1, "Very poor", qol)) %>% 
+  mutate(qol = ifelse(qol == 2, "Poor", qol)) %>% 
+  mutate(qol = ifelse(qol == 3, "Neither poor nor good", qol)) %>% 
+  mutate(qol = ifelse(qol == 4, "Good", qol)) %>% 
+  mutate(qol = ifelse(qol == 5, "Very good", qol)) %>% 
+  mutate(sat = ifelse(sat == 1, "Very poor", sat)) %>% 
+  mutate(sat = ifelse(sat == 2, "Poor", sat)) %>% 
+  mutate(sat = ifelse(sat == 3, "Neither poor nor good", sat)) %>% 
+  mutate(sat = ifelse(sat == 4, "Good", sat)) %>% 
+  mutate(sat = ifelse(sat == 5, "Very good", sat)) 
 
 # similar case_when method
-data6 <- data6 %>% 
+data <- data %>% 
   mutate(pain = case_when(is.na(pain) ~ "missing", 
                               pain == 1 ~ "Not at all", 
                               pain == 2 ~ "A little", 
@@ -105,7 +112,7 @@ for(var in c('pain', 'med', 'enjoy', 'mean', 'concent', 'safe')) {
   
 
 for (var in c('pain', 'med', 'enjoy')) {
-  data <- data6 %>% 
+  data <- data %>% 
     mutate(!!var := ifelse(is.na(get(var)) == TRUE, "missing", get(var))) %>%
     mutate(!!var := ifelse(get(var) == 1, "Not at all", get(var))) %>% 
     mutate(!!var := ifelse(get(var) == 5, "An extreme amount", get(var)))
@@ -115,7 +122,7 @@ for (var in c('pain', 'med', 'enjoy')) {
   
 # Trying a base R for-loop 
 
-y <- data6[,7:18]
+y <- data[,7:18]
 
 data2 <- switch(
   y, 
@@ -129,7 +136,7 @@ data2 <- switch(
 # huhhhhh 
 
 for(var in c("pain", "med", "enjoy")) {
-  data3 <- data6 %>% 
+  data3 <- data %>% 
     apply_labels(get(var), 
                  !!var := c("Not at all" = 1, 
                            "A little" = 2, 
