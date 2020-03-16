@@ -14,22 +14,15 @@ library(tidyverse)
 library(here)
 library(ggplot2)
 library(knitr)
-library(kableExtra)
 library(lubridate)
 library(tableone)
 library(forcats)
 library(stringr)
 library(janitor)
+library(plyr)
 library(dplyr)
 library(qwraps2)
-library(plyr)
-library(ggridges)
-library(viridis)
-library(RColorBrewer)
-library(cowplot)
 library(gridExtra)
-library(beeswarm)
-library(ggbeeswarm)
 library(rlang)
 options(qwraps2_markup = "markdown")
 ```
@@ -37,31 +30,132 @@ options(qwraps2_markup = "markdown")
 ## Read in the 6mo data
 ```{r reading_data, results="hide"}
 
-data6 <- read_csv(here::here("Data", "20191212_OSEAR 6mo prelim data.csv"))
+# Read in 6mo contact data and codebook 
+data6 <- read_csv(here::here("Data", "20200311_OSEAR Prelim 6mo data.csv"))
 codebook6 <- read_csv(here::here("Data", "20191213_OSEAR 6mo prelim codebook.csv"))
 
+# Fix up column names
 colnames(data6) <- colnames(codebook6)
+data6 <- data6 %>% 
+  dplyr::rename(phonecontact = Colname)
+
+# Select completed cases + delete extraneous columns 
+data <- data6 %>% 
+  filter(done == 1) %>% 
+  select(-colldate, -collid)
 
 ```
 
 ## Relabel responses 
 ```{r relabel}
 
-# Old school mutate way 
-data6 <- data6 %>% 
-  mutate(1_qol = ifelse(1_qol == 1, "Very poor", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 2, "Poor", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 3, "Neither poor nor good", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 4, "Good", 1_qol)) %>% 
-  mutate(1_qol = ifelse(1_qol == 5, "Very good", 1_qol)) %>% 
-  mutate(1_sat = ifelse(1_sat == 1, "Very poor", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 2, "Poor", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 3, "Neither poor nor good", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 4, "Good", 1_sat)) %>% 
-  mutate(1_sat = ifelse(1_sat == 5, "Very good", 1_sat)) 
+# Reset data 
+data <- data6 %>% 
+  filter(done == 1) %>% 
+  select(-colldate, -collid)
 
-# similar case_when method
-data6 <- data6 %>% 
+# Trying a piped for-loop 
+for(var in c('pain', 'med', 'enjoy', 'mean', 'concent', 'safe', 'phys', 'energ', 'appear', 'mon', 'avail', 'leis')) {
+    data <- data %>% 
+      dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                  get(var) == 1 ~ "Not at all", 
+                                  get(var) == 2 ~ "A little", 
+                                  get(var) == 3 ~ "A moderate amount", 
+                                  get(var) == 4 ~ "Very much", 
+                                  get(var) == 5 ~ "An extreme amount", 
+                                  TRUE ~ "other"))
+  }
+  
+for(var in c('qol', 'satisf', 'getround')) {
+  data <- data %>% 
+    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                           get(var) == 1 ~ "Very poor", 
+                                           get(var) == 2 ~ "Poor", 
+                                           get(var) == 3 ~ "Neither poor nor good", 
+                                           get(var) == 4 ~ "Good", 
+                                           get(var) == 5 ~ "Very good", 
+                                           TRUE ~ "other"))
+}
+
+for(var in c('sleep', 'adl', 'work', 'self', 'relat', 'sex', 'frenz', 'livplace', 'hserv', 'transport')) {
+  data <- data %>% 
+    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                     get(var) == 1 ~ "Very dissatisfied", 
+                                     get(var) == 2 ~ "Dissatisfied", 
+                                     get(var) == 3 ~ "Neither satisfied nor dissatisfied", 
+                                     get(var) == 4 ~ "Satisfied", 
+                                     get(var) == 5 ~ "Very satisfied", 
+                                     TRUE ~ "other"))
+}
+
+data <- data %>% 
+  mutate(blues = case_when(is.na(blues) ~ "Missing", 
+                           blues == 1 ~ "Never", 
+                           blues == 2 ~ "Seldom", 
+                           blues == 3 ~ "Quite often", 
+                           blues == 4 ~ "Very often", 
+                           blues == 5 ~ "Always", 
+                           TRUE ~ "other"))
+
+
+```
+
+# Tables for frequency counts 
+```{r freq_count_tables}
+
+### EQ-5D
+
+# Satisfaction 
+sat_data <- data %>% 
+  select(sleep, adl, work, self, relat, sex, frenz, livplace, hserv, transport)
+
+sat_ans <- c("Very satisfied", "Satisfied", "Neither satisfied nor dissatisfied", "Dissatisfied", "Very dissatisfied", "Missing", "other") 
+
+sat_func <- function (x) {
+  x <- factor(x, levels = sat_ans) 
+  counts <- table(x) 
+}
+
+sat_tab <- sapply(colnames(sat_data), function(col) {
+  sat_func(sat_data[[col]])
+})
+
+sat_tab <- as.data.frame(t(sat_tab))
+
+sat_tab2 <- apply(sat_data, 2, sat_func) %>% 
+  t() %>% 
+  as.data.frame()
+
+
+
+
+```
+
+
+
+
+
+
+
+
+# Discarded attempts at things 
+```{r discards, include = FALSE}
+
+# Old school individual var mutate way 
+data <- data %>% 
+  mutate(qol = ifelse(qol == 1, "Very poor", qol)) %>% 
+  mutate(qol = ifelse(qol == 2, "Poor", qol)) %>% 
+  mutate(qol = ifelse(qol == 3, "Neither poor nor good", qol)) %>% 
+  mutate(qol = ifelse(qol == 4, "Good", qol)) %>% 
+  mutate(qol = ifelse(qol == 5, "Very good", qol)) %>% 
+  mutate(sat = ifelse(sat == 1, "Very poor", sat)) %>% 
+  mutate(sat = ifelse(sat == 2, "Poor", sat)) %>% 
+  mutate(sat = ifelse(sat == 3, "Neither poor nor good", sat)) %>% 
+  mutate(sat = ifelse(sat == 4, "Good", sat)) %>% 
+  mutate(sat = ifelse(sat == 5, "Very good", sat)) 
+
+# Individual case_when method
+data <- data %>% 
   mutate(pain = case_when(is.na(pain) ~ "missing", 
                               pain == 1 ~ "Not at all", 
                               pain == 2 ~ "A little", 
@@ -91,21 +185,8 @@ data6 <- data6 %>%
                               mean == 5 ~ "An extreme amount", 
                               TRUE ~ "other"))
 
-# Trying a piped for-loop 
-for(var in c('pain', 'med', 'enjoy', 'mean', 'concent', 'safe')) {
-    data <- data6 %>% 
-      mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
-                                  get(var) == 1 ~ "Not at all", 
-                                  get(var) == 2 ~ "A little", 
-                                  get(var) == 3 ~ "A moderate amount", 
-                                  get(var) == 4 ~ "Very much", 
-                                  get(var) == 5 ~ "An extreme amount", 
-                                  TRUE ~ "other"))
-  }
-  
-
-for (var in c('pain', 'med', 'enjoy')) {
-  data <- data6 %>% 
+  for (var in c('pain', 'med', 'enjoy')) {
+  data <- data %>% 
     mutate(!!var := ifelse(is.na(get(var)) == TRUE, "missing", get(var))) %>%
     mutate(!!var := ifelse(get(var) == 1, "Not at all", get(var))) %>% 
     mutate(!!var := ifelse(get(var) == 5, "An extreme amount", get(var)))
@@ -115,7 +196,7 @@ for (var in c('pain', 'med', 'enjoy')) {
   
 # Trying a base R for-loop 
 
-y <- data6[,7:18]
+y <- data[,7:18]
 
 data2 <- switch(
   y, 
@@ -129,7 +210,7 @@ data2 <- switch(
 # huhhhhh 
 
 for(var in c("pain", "med", "enjoy")) {
-  data3 <- data6 %>% 
+  data3 <- data %>% 
     apply_labels(get(var), 
                  !!var := c("Not at all" = 1, 
                            "A little" = 2, 
@@ -141,13 +222,6 @@ for(var in c("pain", "med", "enjoy")) {
 
 data3 <- apply_labels(data6, 
                       )
-
-
-```
-
-# Work-around: assign labels after taking counts
-```{r tabs}
-
 
 
 ```
