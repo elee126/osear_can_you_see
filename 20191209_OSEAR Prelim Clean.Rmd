@@ -39,17 +39,12 @@ colnames(data6) <- colnames(codebook6)
 data6 <- data6 %>% 
   dplyr::rename(phonecontact = Colname)
 
-# Select completed cases + delete extraneous columns 
-data <- data6 %>% 
-  filter(done == 1) %>% 
-  select(-colldate, -collid)
-
 ```
 
-## Relabel responses 
-```{r relabel}
+## Relabel WHOQOL-BREF responses 
+```{r whoqol_relabel}
 
-# Reset data 
+# Select completed cases + delete extraneous columns
 data <- data6 %>% 
   filter(done == 1) %>% 
   select(-colldate, -collid)
@@ -100,32 +95,71 @@ data <- data %>%
 
 ```
 
-# Tables for frequency counts 
+# WHOQOL-BREF frequency tables
 ```{r freq_count_tables}
 
-### EQ-5D
+### WHOQOL-BREF
+## Very poor to Very good 
+pg_data <- data %>%                                  # Select questions that use very poor > Very good answers
+  select(qol, satisf, getround) 
 
-# Satisfaction 
+pg_ans <- c("Very poor", "Poor", "Neither poor nor good", "Good", "Very good", "Missing", "other") # Answers
+
+pg_func <- function (a) {                            # Create function! 
+  a <- factor(a, levels = pg_ans)                    # Level based on answers
+  counts <- table(a)                                 # Create frequency count table 
+}
+
+pg_tab <- apply(pg_data, 2, pg_func) %>%             # Apply counting function to selected columns(2) 
+  t() %>%                                            # Transpose so answers = columns
+  as.data.frame()                                    # Store as data frame 
+
+rm(list = c('pg_data', 'pg_ans', 'pg_func'))         # Clean up 
+
+## Not at all -> An extreme amount
+nex_data <- data %>% 
+  select(pain, med, enjoy, mean, concent, safe, phys, energ, appear, mon, avail, leis)
+
+nex_ans <- c("Not at all", "A little", "A moderate amount", "Very much", "An extreme amount", "Missing", "other") 
+
+nex_func <- function (b) {
+  b <- factor(b, levels = nex_ans) 
+  counts <- table(b)
+}
+
+nex_tab <- apply(nex_data, 2, nex_func) %>% 
+  t() %>% 
+  as.data.frame()
+
+rm(list = c('nex_data', 'nex_ans', 'nex_func'))
+
+## Very dissatsfied to Very Satisfied  
 sat_data <- data %>% 
   select(sleep, adl, work, self, relat, sex, frenz, livplace, hserv, transport)
 
-sat_ans <- c("Very satisfied", "Satisfied", "Neither satisfied nor dissatisfied", "Dissatisfied", "Very dissatisfied", "Missing", "other") 
+sat_ans <- c("Very dissatisfied", "Dissatisfied", "Neither satisfied nor dissatisfied", "Satisfied", "Very satisfied", "Missing", "other") 
 
 sat_func <- function (x) {
   x <- factor(x, levels = sat_ans) 
   counts <- table(x) 
 }
 
-sat_tab <- sapply(colnames(sat_data), function(col) {
-  sat_func(sat_data[[col]])
-})
-
-sat_tab <- as.data.frame(t(sat_tab))
-
-sat_tab2 <- apply(sat_data, 2, sat_func) %>% 
+sat_tab <- apply(sat_data, 2, sat_func) %>% 
   t() %>% 
   as.data.frame()
 
+rm(list = c('sat_data', 'sat_ans', 'sat_func'))
+
+## Mood 
+mood_data <- select(data, blues)
+
+mood_tab <- as.data.frame(table(mood_data)) %>% 
+  t()
+
+```
+
+# Relabel MSPSS responses
+```{r mspss_relabel }
 
 
 
@@ -135,11 +169,14 @@ sat_tab2 <- apply(sat_data, 2, sat_func) %>%
 
 
 
-
-
-
 # Discarded attempts at things 
 ```{r discards, include = FALSE}
+
+sat_tab <- sapply(colnames(sat_data), function(col) {
+  sat_func(sat_data[[col]])
+})
+
+sat_tab <- as.data.frame(t(sat_tab))
 
 # Old school individual var mutate way 
 data <- data %>% 
