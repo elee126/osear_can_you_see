@@ -156,11 +156,44 @@ mood_data <- select(data, blues)
 mood_tab <- as.data.frame(table(mood_data)) %>% 
   t()
 
+rm(mood_data)
+
 ```
 
-# Relabel MSPSS responses
-```{r mspss_relabel }
+# Relabel MSPSS responses + generate frequency counts 
+```{r mspss_relabel_count }
 
+for(var in c('soneed', 'soshare', 'famhelp', 'emot', 'comf', 'frhelp', 'count', 'talkfam', 'shfriend', 'specare', 'decis', 'talkfr')) {
+  data <- data %>% 
+    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                     get(var) == 1 ~ "Very Strongly Disagree", 
+                                     get(var) == 2 ~ "Strongly Disagree", 
+                                     get(var) == 3 ~ "Mildly Disagree", 
+                                     get(var) == 4 ~ "Neutral", 
+                                     get(var) == 5 ~ "Mildly Agree", 
+                                     get(var) == 6 ~ "Strongly Agree", 
+                                     get(var) == 7 ~ "Very Strongly Agree", 
+                                     TRUE ~ "other"))
+}
+
+mspss_data <- data %>% 
+  select(soneed, soshare, famhelp, emot, comf, frhelp, count, talkfam, shfriend, specare, decis, talkfr)
+
+mspss_ans <- c("Very Strongly Disagree", "Strongly Disagree", "Mildly Disagree", "Neutral", "Mildly Agree", "Strongly Agree", "Very Strongly Agree", "Missing", "other") 
+
+mspss_func <- function (m) {
+  m <- factor(m, levels = mspss_ans) 
+  counts <- table(m) 
+}
+
+mspss_tab <- apply(mspss_data, 2, mspss_func) %>% 
+  t() %>% 
+  as.data.frame()
+
+rm(list = c('mspss_data', 'mspss_ans', 'mspss_func'))
+
+mspss_tab <- mspss_tab %>% 
+  select(-other)
 
 
 ```
