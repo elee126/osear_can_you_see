@@ -338,14 +338,49 @@ mspss_tab <- mspss_tab %>%
 
 # Read in demographics data from APICS screening (age, gender, race, ethnicity)
 dem_data_scr <- read_csv(here::here("Data", "20200522_APICS OSEAR screening demographics.csv"))
+
+
+summary1<- 
+      list("Age" = 
+             list("median (IQR)" = ~qwraps2::median_iqr(.data$age, digits = 0)), 
+           "Gender n (%)" = 
+             list("Female"= ~qwraps2::n_perc0(.data$gender == "Female"), 
+                  "Male" = ~qwraps2::n_perc0(.data$gender == "Male")), 
+           "Race n (%)" = 
+             list("White"= ~qwraps2::n_perc0(.data$race == "White"),
+                  "Black" = ~qwraps2::n_perc0(.data$race == "Black"), 
+                  "Multiracial" = ~qwraps2::n_perc0(.data$race == "Multiracial"),
+                  "Asian" = ~qwraps2::n_perc0(.data$race == "Asian"), 
+                  "Unknown" = ~qwraps2::n_perc0(.data$race == "Unknown")),
+           "Ethnicity n (%)" =
+             list("Hispanic or Latino" = ~qwraps2::n_perc0(.data$ethn == "Yes"), 
+                  "Not Hispanic or Latino" = ~qwraps2::n_perc0(.data$ethn == "No"), 
+                  "Unknown" = ~qwraps2::n_perc0(.data$ethn == "Unknown")))
+            "Education n (%)" = 
+             list("8th grade or less" = ~qwraps2::n_perc0(.data$ed == "8th grade or less"), 
+                  "Some high school, but did not graduate" = ~qwraps2::n_perc0(.data$ed == "Some high school")
+                  "High school graduate or GED" = ~qwraps2::n_perc0(.data$ed == "High school graduate or GED"),
+                  "Some college or 2-year degree" = ~qwraps2::n_perc0(.data$ed == "Some college or 2-year degree"), 
+                  "4-year college graduate" = ~qwraps2::n_perc0(.data$ed == "4-year degree"), 
+                  "More than 4-year college degree" = ~qwraps2::n_perc0(.data$ed == "More than 4-year degree"), 
+                  "Not available" = ~qwraps2::n_perc0(.data$ed == "Not available / Unknown")))
+
+## Assembling the columns of Table 1 
+  tab1<-summary_table(dem_data_scr, summary1)                          
+
+## Print Table 2 
+  print(tab1,
+      rtitle = "Study Participant Characteristics")
+
+  
+#-------------------
 # Read in demographics from baseline (education, ADI decile / percentile)
 dem_data_bsln <- read_csv(here::here("Data", "2020______.csv"))
 # Read in OSEAR enrollment ID list 
 osear_ids <- read_csv(here::here("Data", "20200604_OSEAR Enrolled ID List.csv"))
 # Create combined OSEAR demographic dataset
 dem_data_comb <- 
-
-
+  
 summary1<- 
       list("Age" = 
              list("median (IQR)" = ~qwraps2::median_iqr(.data$age, digits = 0)), 
@@ -369,15 +404,12 @@ summary1<-
                   "Some college or 2-year degree" = ~qwraps2::n_perc0(.data$ed == "Some college or 2-year degree"), 
                   "4-year college graduate" = ~qwraps2::n_perc0(.data$ed == "4-year degree"), 
                   "More than 4-year college degree" = ~qwraps2::n_perc0(.data$ed == "More than 4-year degree"), 
-                  "Not available" = ~qwraps2::n_perc0(.data$ed == "Not available / Unknown")))
-
-## Assembling the columns of Table 1 
-  tab1<-summary_table(dem_data_comb, summary1)                          
-
-## Print Table 2 
-  print(tab1,
-      rtitle = "Trial Participant Characteristics")
-
+                  "Not available" = ~qwraps2::n_perc0(.data$ed == "Not available / Unknown")), 
+           "ADI Decile" = 
+             list("median (IQR)" = ~qwraps::median_iqr(.data$adi_dec, digits = 0)), 
+           "ADI Percentile" = 
+             list("median (IQR)" = ~qwraps::median_iqr(.data$adi_perc, digits = 0)))
+  
 
 
 ```
