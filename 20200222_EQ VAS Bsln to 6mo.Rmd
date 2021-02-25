@@ -1,0 +1,228 @@
+---
+title: "20200222_EQ-Vas Bsln to 6mo"
+author: "Emma Lee"
+date: "2/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(qwraps2)
+library(janitor)
+library(ggplot2)
+```
+
+# EQ VAS #
+
+#### Raw data is sourced from the following locations: 
+####     1. Bsln EQ VAS from APICS-01, OSEAR Only, APICS-C --> APICS-01 Redcap database 
+####     2. 6mo EQ Vas from APICS-01, OSEAR Only --> APICS-01 Access database
+####     3. 6mo EQ Vas from APICS-C --> APICS-C Access database 
+
+
+## Read in the Baseline data
+```{r read_bsln, include=FALSE}
+
+bsln_data <- read_csv(here::here("Data", "20210222_OSEAR APICS01 Bsln.csv"))
+
+# Pull EQ VAS column
+    vars <- c("id", "osear_1")
+    eqvas_bsln <- bsln_data[vars]
+    
+    eqvas_bsln <- eqvas_bsln %>% 
+      filter(is.na(osear_1) == FALSE)
+
+# Rename 
+    colnames(eqvas_bsln)[2] <- "eqvas_dc"
+
+    
+# Clean up
+rm(vars)
+rm(bsln_data)
+```
+
+## Read in the 6mo follow up data 
+```{r read_6mo, include=FALSE}
+
+f_up_data <- read_csv(here::here("Data", "20210209_APICS01 OSEAR 6mo Data.csv"))
+
+# Pull EQ VAS column 
+    vars2 <- c("p1_subid", "p6_eqol_health")
+    eqvas_6mo <- f_up_data[vars2] 
+
+# Rename 
+    colnames(eqvas_6mo)[1] <- "id"
+    colnames(eqvas_6mo)[2] <- "eqvas_6mo"
+    
+    
+# Clean up
+rm(vars2)
+rm(f_up_data)
+```
+
+## Merge datasets 
+```{r merge, include=FALSE}
+
+eqvas_data <- eqvas_bsln %>% 
+  left_join(eqvas_6mo)
+
+```
+
+## Summary of data
+```{r summary}
+
+# Counts 
+    sum(!is.na(eqvas_data$eqvas_dc))        # 170 baseline 
+    sum(!is.na(eqvas_data$eqvas_6mo))       # 117 complete @ 6mo
+    sum(is.na(eqvas_data$eqvas_6mo))        # 53 missing @ 6mo
+
+# Baseline summary stats 
+
+    summary(eqvas_data$eqvas_dc)
+
+    hist(eqvas_data$eqvas_dc, 
+         main = "Expected Health 6mo from Discharge", 
+         xlab = "% of Full Health", 
+         xlim = c(0, 100), 
+         ylim = c(0, 60), 
+         breaks = 7)
+
+
+# 6mo summary stats 
+    
+    summary(eqvas_data$eqvas_6mo)
+    
+    hist(eqvas_data$eqvas_6mo, 
+         main = "Perceived Health at 6mo from Discharge", 
+         xlab = "% of Full Health", 
+         xlim = c(0, 100), 
+         ylim = c(0, 60), 
+         breaks = 10)
+
+    
+# Boxplot comparison 
+
+    boxplot(eqvas_data[,-1], 
+            horizontal = TRUE, 
+            main = "Expected vs. Perceived Health at 6mo Post-Discharge", 
+            xlab = "% of Full Health")
+    
+    
+```
+## Baseline to 6mo changes into DF
+```{r change, echo=FALSE}
+
+# Calculate differences + label up/down/same 
+
+    change_data <- eqvas_data %>% 
+      mutate(diff = (eqvas_data$eqvas_6mo - eqvas_data$eqvas_dc)) 
+    
+    change_data <- change_data %>% 
+      mutate(change_label = ifelse(diff > 0, "Perceived > Expected", NA)) %>% 
+      mutate(change_label = ifelse(diff < 0, "Perceived < Expected", change_label)) %>% 
+      mutate(change_label = ifelse(diff == 0, "Perceived = Expected", change_label))
+    
+    change_data <- change_data %>% 
+      select(id, diff, change_label) %>% 
+      filter(!is.na(diff))
+
+
+```
+
+
+## Summary of changes
+```{r change_summary}
+
+# Counts of changes
+    
+    sum(!is.na(change_data$diff))                # 117 complete @ 6mo
+    nrow(change_data[change_data$diff > 0,])     # 27 perceived > expected 
+    nrow(change_data[change_data$diff == 0,])    # 20 perceived = expected
+    
+    nrow(change_data[change_data$diff < 0,])     # 70 perceived < expected
+    nrow(change_data[change_data$diff < -8,])    # 59 perceived < expected by more than 8 points 
+
+    
+    hist(change_data$diff, 
+         main = "Distribution of changes from Expected to Perceived Health", 
+         xlab = "% Perceived Health - % Expected Health", 
+         xlim = c(-100, 100), 
+         ylim = c(0, 50), 
+         breaks = 12)
+    
+
+```
+
+
+## Spaghetti plot
+```{r spaghetti, echo=FALSE}
+
+# Prepare data with a nice massage 
+
+    # Add a timepoint column for bsln data, labelled "value"
+    eqvas_bsln <- eqvas_bsln %>% 
+      mutate(timepoint = "Expected at D/C") 
+    colnames(eqvas_bsln)[2] <- "value"
+    
+    # Add a timepoint column for 6mo data, labelled "value"
+    eqvas_6mo <- eqvas_6mo %>% 
+      mutate(timepoint = "Perceived at 6mo")
+    colnames(eqvas_6mo)[2] <- "value"
+    
+    # Rbind bsln and 6mo data 
+    data <- rbind(eqvas_bsln, eqvas_6mo)
+    data <- arrange(data, id)
+    
+    # Merge change 
+    data <- data %>% 
+      left_join(change_data)
+    
+
+# Base R version of the spaghetti plot 
+    interaction.plot(x.factor = data$timepoint, 
+                     trace.factor = data$id, 
+                     response = data$value, 
+                     ylab = "% of Full Health",
+                     xlab = "Timepoint",
+                     lty = 1, 
+                     lwd = 1, 
+                     legend = FALSE
+                     ) 
+    # meh
+
+    
+# Trying out ggplot2 version 
+    
+    #data2 <- filter(data, !is.na(data$eqvas_6mo))
+
+    noodles <- data %>%
+      ggplot(aes(x = timepoint, y = value, color = change_label)) + 
+      geom_line(aes(group = id), 
+                position = position_jitter(w=0.02, h=0)) + 
+      labs(title = "Expected vs. Perceived Health 6mo Post-Discharge", 
+           x = "", 
+           y = "% of Best Possible Health", 
+           color = "Legend") + 
+      scale_color_manual(values=c("black", "green", "red")) + 
+      theme_bw()
+
+    print(noodles)
+    # better
+
+
+```
+
+
+
+
+
+
+
+

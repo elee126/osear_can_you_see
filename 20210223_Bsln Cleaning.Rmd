@@ -1,0 +1,90 @@
+---
+title: "Baseline Cleaning"
+author: "Emma Lee"
+date: "2/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+# Baseline Data Clean # 
+#### Raw data is sourced from APICS-01 / OSEAR Only / APICS-C Redcap database
+
+# Read in data 
+```{r read-in, include=FALSE}
+
+bsln_data <- read_csv(here::here("Data", "20210224_OSEAR APICS01 Bsln.csv"))
+
+# Check participant count 
+    length(unique(bsln_data$id)) 
+    # 180 participants! 
+
+# Pull forms into individual data frames 
+
+    # Informed Consent form: Consent date 
+    consent_df <- bsln_data %>% 
+      filter(is.na(consent_dt) == FALSE) %>% 
+      select(id, study_site, consent_dt)
+    
+    length(unique(consent_df$id))               # Yup, same length tg
+    
+    
+    # Form 1: HUS, ADL, IADL, CFS, MSPSS 
+    f1_var <- c("id", "study_site", "hus_rehab", "hus_nursing", "adl_pt", "adl_proxy", "adl_bath", "adl_dress", "adl_toil", "adl_trans", "adl_cntine", "adl_feed", "iadl_pt", "iadl_proxy", "iadl_tel", "iadl_shop", "iadl_foodprep", "iadl_housekeep", "iadl_laundry", "iadl_transp", "iadl_med", "iadl_fin", "cfs_admin", "cfs", "m1_so", "m2_so", "m3_fam", "m4_fam", "m5_so", "m6_fr", "m7_fr", "m8_fam", "m9_fr", "m10_so", "m11_fam", "m12_fr")
+    f1_df <- bsln_data %>% 
+      filter(is.na(hus_rehab) == FALSE) %>% 
+      select(f1_var)
+    
+    f1_dup <- f1_df %>% 
+      filter(duplicated(id) == TRUE)        # Duplicates: 3001, 3003, 3006, 3007 
+    
+    f1_df <- f1_df %>% 
+      distinct()                            # Goodbye to duplicate rows
+    
+    length(unique(f1_df$id))                # Sick, all 180 are still with us
+
+    
+    # Form 2: Demographics, Surgical status, FCI/CCI 
+    f2_var <- c("id", "study_site", "demogr_age", "demogr_dob",	"demogr_sex",	"demogr_race",	"demogr_ethni",	"demogr_ins1a___1",	"demogr_ins1a___2",	"demogr_ins1a___3",	"demogr_ins1a___4",	"demogr_ins1a___5",	"demogr_ins1a___7",	"demogr_ins1a___8",	"demogr_ins1a___9",	"demogr_ins1a___10",	"demogr_hosp_ad_dx",	"ap_surg",	"fci_cci_16___23",	"fci_cci_16___24",	"fci_cci_antidep")
+    f2_df <- bsln_data %>% 
+      select(f2_var)
+    
+    f2_df <- distinct(f2_df)
+    
+    f2_dup <- f2_df %>% 
+      filter(duplicated(id) == TRUE)        # 18 duplicates! Weird, since there are 190 obs instead of 180
+    
+    
+
+
+    
+    
+# Clean up 
+#    rm(f1_var)
+#    rm(f1_dup)
+    
+#    rm(f2_var)
+    
+```
+
+
+
+```{r , echo=FALSE}
+
+
+
+```
+
+
+
+

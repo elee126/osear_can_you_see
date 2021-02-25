@@ -1,0 +1,155 @@
+---
+title: "Demographics"
+author: "Emma Lee"
+date: "2/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(qwraps2)
+library(janitor)
+options(qwraps2_markup = "markdown")
+```
+
+# Demographics #
+
+#### Raw data is sourced from 2 locations 
+####     a) Screening data from Redcap "APICS-Screening" 
+####         - Age
+####         - Gender
+####         - Race
+####         - Ethnicity
+####     b) Baseline data from Redcap "APICS-Data Collection Forms" 
+####         - All of the above 
+####         - Prior HUS 
+####         - Type of Insurance 
+####         - Admission date / OSH status 
+####         - Admission Dx
+
+
+## APICS-Screening demographic characteristics table 
+```{r screening, include=FALSE }
+
+## This code was used periodically to update the enrollment counts using the bare bones demographics information collected at participant screening ## 
+
+# Read in demographics data from APICS screening Redcap export (age, gender, race, ethnicity)
+dem_data_scr <- read_csv(here::here("Data", "20210204_OSEAR Demographics.csv"))
+
+# Split participants along axes of gender and ethnicity 
+      #Female & Not Hispanic or Latino 
+      dem_f_nhl <- dem_data_scr %>% 
+        filter(gender == 2, ethn == 0)
+      #Female & Hispanic/Latino 
+      dem_f_hl <- dem_data_scr %>% 
+        filter(gender == 2, ethn == 1)
+      #Female & unknown ethnicity 
+      dem_f_unk <- dem_data_scr %>% 
+        filter(gender == 2, ethn == 2)
+      
+      #Now the males 
+      dem_m_nhl <- dem_data_scr %>% 
+        filter(gender == 1, ethn == 0)
+      dem_m_hl <- dem_data_scr %>% 
+        filter(gender == 1, ethn == 1)
+      dem_m_unk <- dem_data_scr %>% 
+        filter(gender == 1, ethn == 2)
+
+# Build a basic Table 1
+summary1<- 
+      list("Age" = 
+             list("median (IQR)" = ~qwraps2::median_iqr(.data$age, digits = 0)), 
+           "Gender n (%)" = 
+             list("Female"= ~qwraps2::n_perc0(.data$gender == 2), 
+                  "Male" = ~qwraps2::n_perc0(.data$gender == 1)), 
+           "Race n (%)" = 
+             list("White"= ~qwraps2::n_perc0(.data$race == 4),
+                  "Black" = ~qwraps2::n_perc0(.data$race == 2), 
+                  "Multiracial" = ~qwraps2::n_perc0(.data$race == 6),
+                  "Asian" = ~qwraps2::n_perc0(.data$race == 1), 
+                  "Unknown" = ~qwraps2::n_perc0(.data$race == 7)),
+           "Ethnicity n (%)" =
+             list("Hispanic or Latino" = ~qwraps2::n_perc0(.data$ethn == 1), 
+                  "Not Hispanic or Latino" = ~qwraps2::n_perc0(.data$ethn == 0), 
+                  "Unknown" = ~qwraps2::n_perc0(.data$ethn == 2)))
+
+# Assembling the columns of Table 1 
+  tab1<-summary_table(dem_data_scr, summary1) 
+  
+  tab1_f_nhl<-summary_table(dem_f_nhl, summary1)
+  tab1_f_hl<-summary_table(dem_f_hl, summary1)
+  tab1_f_unk<-summary_table(dem_f_unk, summary1)
+  
+  tab1_m_nhl<-summary_table(dem_m_nhl, summary1)
+  tab1_m_hl<-summary_table(dem_m_hl, summary1)
+  tab1_m_unk<-summary_table(dem_m_unk, summary1)
+
+# Print Table  
+  print(tab1,                                   # Modify tab1_* name to view counts for subgroups in table form
+      rtitle = "Study Participant Characteristics")
+
+
+```
+
+
+## APICS-Data Collection Forms demographic characteristics table
+```{r baseline, include=FALSE }
+
+## This code is to be used to generate Table 1 for participants co-enrolled in APICS-01 ##
+
+# Read in entire Baseline csv 
+bsln_data_a01 <- 
+
+
+
+
+# Filter for demographic info only 
+dem_data_bsln <- data %>% 
+  select(id, )
+  
+# Read in OSEAR enrollment ID list 
+osear_ids <- read_csv(here::here("Data", "20210204_OSEAR Enrolled ID List.csv"))
+
+  
+summary1<- 
+      list("Age" = 
+             list("median (IQR)" = ~qwraps2::median_iqr(.data$age, digits = 0)), 
+           "Gender n (%)" = 
+             list("Female"= ~qwraps2::n_perc0(.data$gender == "Female"), 
+                  "Male" = ~qwraps2::n_perc0(.data$gender == "Male")), 
+           "Race n (%)" = 
+             list("White"= ~qwraps2::n_perc0(.data$race == "White"),
+                  "Black" = ~qwraps2::n_perc0(.data$race == "Black"), 
+                  "Multiracial" = ~qwraps2::n_perc0(.data$race == "Multiracial"),
+                  "Asian" = ~qwraps2::n_perc0(.data$race == "Asian"), 
+                  "Unknown" = ~qwraps2::n_perc0(.data$race == "Unknown")),
+           "Ethnicity n (%)" =
+             list("Hispanic or Latino" = ~qwraps2::n_perc0(.data$ethn == "Yes"), 
+                  "Not Hispanic or Latino" = ~qwraps2::n_perc0(.data$ethn == "No"), 
+                  "Unknown" = ~qwraps2::n_perc0(.data$ethn == "Unknown")),
+            "Education n (%)" = 
+             list("8th grade or less" = ~qwraps2::n_perc0(.data$ed == "8th grade or less"), 
+                  "Some high school, but did not graduate" = ~qwraps2::n_perc0(.data$ed == "Some high school")
+                  "High school graduate or GED" = ~qwraps2::n_perc0(.data$ed == "High school graduate or GED"),
+                  "Some college or 2-year degree" = ~qwraps2::n_perc0(.data$ed == "Some college or 2-year degree"), 
+                  "4-year college graduate" = ~qwraps2::n_perc0(.data$ed == "4-year degree"), 
+                  "More than 4-year college degree" = ~qwraps2::n_perc0(.data$ed == "More than 4-year degree"), 
+                  "Not available" = ~qwraps2::n_perc0(.data$ed == "Not available / Unknown")), 
+           "ADI Decile" = 
+             list("median (IQR)" = ~qwraps::median_iqr(.data$adi_dec, digits = 0)), 
+           "ADI Percentile" = 
+             list("median (IQR)" = ~qwraps::median_iqr(.data$adi_perc, digits = 0)))
+  
+
+```
+
+
+
+

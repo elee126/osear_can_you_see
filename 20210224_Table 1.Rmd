@@ -1,0 +1,37 @@
+---
+title: "Table 1"
+author: "Emma Lee"
+date: "2/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(qwraps2)
+library(janitor)
+library(furniture)
+options(qwraps2_markup = "markdown")
+```
+
+```{r }
+
+
+
+
+```
+
+
+
+```{r , echo=FALSE}
+
+
+
+```
+
