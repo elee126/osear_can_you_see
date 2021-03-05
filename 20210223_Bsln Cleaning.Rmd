@@ -24,67 +24,288 @@ library(janitor)
 ```{r read-in, include=FALSE}
 
 bsln_data <- read_csv(here::here("Data", "20210224_OSEAR APICS01 Bsln.csv"))
+    
+# Toss rows that contain no data 
+    bsln_data <- bsln_data %>% 
+      mutate(keep = ifelse(rowSums(is.na(bsln_data) == TRUE) <108, 1, 0))
+    
+    bsln_data <- bsln_data %>% 
+      filter(keep == 1)
 
 # Check participant count 
     length(unique(bsln_data$id)) 
     # 180 participants! 
+    
+# Participant list 
+    pt_list <- unique(bsln_data[, 1])
+ 
+    
+```
+
 
 # Pull forms into individual data frames 
+```{r consent_df, echo=FALSE}
 
-    # Informed Consent form: Consent date 
+# Informed Consent form: Consent date 
+    
     consent_df <- bsln_data %>% 
       filter(is.na(consent_dt) == FALSE) %>% 
       select(id, study_site, consent_dt)
     
-    length(unique(consent_df$id))               # Yup, same length tg
+    consent_dup <- filter(consent_df, duplicated(consent_df$id) == TRUE)      # Duplicates: 3001, 3003, 3006, 3007 
     
+    consent_df <- consent_df %>%                                              # Get rid of duplicates
+      distinct()
+
+    length(unique(consent_df$id))                                             # Yup, same number of participants
     
-    # Form 1: HUS, ADL, IADL, CFS, MSPSS 
+# clean up
+    rm(consent_dup)
+    
+
+```
+
+
+```{r form_1, echo=FALSE}
+
+# Form 1: HUS, ADL, IADL, CFS, MSPSS 
+
     f1_var <- c("id", "study_site", "hus_rehab", "hus_nursing", "adl_pt", "adl_proxy", "adl_bath", "adl_dress", "adl_toil", "adl_trans", "adl_cntine", "adl_feed", "iadl_pt", "iadl_proxy", "iadl_tel", "iadl_shop", "iadl_foodprep", "iadl_housekeep", "iadl_laundry", "iadl_transp", "iadl_med", "iadl_fin", "cfs_admin", "cfs", "m1_so", "m2_so", "m3_fam", "m4_fam", "m5_so", "m6_fr", "m7_fr", "m8_fam", "m9_fr", "m10_so", "m11_fam", "m12_fr")
+    
     f1_df <- bsln_data %>% 
       filter(is.na(hus_rehab) == FALSE) %>% 
       select(f1_var)
     
     f1_dup <- f1_df %>% 
-      filter(duplicated(id) == TRUE)        # Duplicates: 3001, 3003, 3006, 3007 
+      filter(duplicated(id) == TRUE)        # Same duplicates as consent: 3001, 3003, 3006, 3007 
     
     f1_df <- f1_df %>% 
-      distinct()                            # Goodbye to duplicate rows
+      distinct() %>%                             # Goodbye to duplicate rows
+      select(-study_site)
     
     length(unique(f1_df$id))                # Sick, all 180 are still with us
-
+  
+# Clean up  
+    rm(f1_dup)
+    rm(f1_var)
     
-    # Form 2: Demographics, Surgical status, FCI/CCI 
+```
+
+
+```{r form_2, echo=FALSE}
+
+# Form 2: Demographics, Surgical status, FCI/CCI 
+
     f2_var <- c("id", "study_site", "demogr_age", "demogr_dob",	"demogr_sex",	"demogr_race",	"demogr_ethni",	"demogr_ins1a___1",	"demogr_ins1a___2",	"demogr_ins1a___3",	"demogr_ins1a___4",	"demogr_ins1a___5",	"demogr_ins1a___7",	"demogr_ins1a___8",	"demogr_ins1a___9",	"demogr_ins1a___10",	"demogr_hosp_ad_dx",	"ap_surg",	"fci_cci_16___23",	"fci_cci_16___24",	"fci_cci_antidep")
+    
     f2_df <- bsln_data %>% 
       select(f2_var)
     
-    f2_df <- distinct(f2_df)
+    length(unique(f2_df$id))               # 180 still with us
+    
+    f2_df <- f2_df %>% 
+      mutate(keep = ifelse(rowSums(is.na(f2_df) == TRUE) < 19, 1, 0)) %>% 
+      filter(keep == 1) %>% 
+      select(-keep)
+    
+# Uniques
+    
+    length(unique(f2_df$id))                # 172 unique, missing 8
+    
+    f2_list <- unique(f2_df[, 1]) 
+    setdiff(pt_list, f2_list)               # Ah, looks like the 8 APICS-COVID co-enrollees don't have Form 2 data collected yet. 
+                                            # 3202 3203 3204 3205 3206 3207 3208 3209
+    
+# Duplicates 
     
     f2_dup <- f2_df %>% 
-      filter(duplicated(id) == TRUE)        # 18 duplicates! Weird, since there are 190 obs instead of 180
+      filter(duplicated(id) == TRUE)        # 18 duplicates! 3001 3003 3004 3005 3006 3007 3009 3010 3011 3012 3013 3014 3015 3016 3018 3019 3020 3021
     
+    f2_df <- f2_df %>% 
+      distinct() %>% 
+      select(-study_site)
     
-
-
+    length(unique(f2_df$id))                # 172 distinct IDs at the moment
     
+    f2_dup <- f2_df %>% 
+      filter(duplicated(id) == TRUE)        # Down to 6 duplicates whose data don't match exactly 3001 3003 3004 3005 3006 3010
     
-# Clean up 
-#    rm(f1_var)
-#    rm(f1_dup)
+# Investigation
     
-#    rm(f2_var)
+    dups <- f2_df %>% 
+      filter(id %in% f2_dup$id)             # Only 1 unmatched column: fci_cci_antidep has 1 row with value, 1 row with NA for each of these participants 
+    
+    sum(is.na(f2_df$fci_cci_antidep) == TRUE) # 29 instances of NA in target column, so we can't filter main f2_df 
+    
+    f2_df <- f2_df[!((f2_df$id %in% f2_dup$id) & is.na(f2_df$fci_cci_antidep) == TRUE), ]    # Ta da! No more duplicates 
+    
+  
+    
+# Clean up
+    rm(f2_var)
+    rm(f2_list)
+    rm(f2_dup)
+    rm(dups)
+    
     
 ```
 
 
+```{r form_4, echo=FALSE}
 
-```{r , echo=FALSE}
+# Form 4: ARDS status 
 
+    f4_var <- c("id", "study_site", "no_ards_imv___1")
+
+    f4_df <- bsln_data %>% 
+      select(f4_var)
+    
+    length(unique(f4_df$id))                 # 180, looks good 
+    
+    f4_df <- f4_df %>% 
+      filter(is.na(no_ards_imv___1) == FALSE)
+
+# Uniques 
+    
+    length(unique(f4_df$id))                 # 170, missing a few
+    
+    f4_list <- unique(f4_df[, 1])
+    setdiff(pt_list, f4_list)                # Missing everyone from APICS-C (8pts), 3133 and 3141 from OSEAR-Only 
+    
+# Duplicates
+
+    f4_dup <- f4_df %>% 
+      filter(duplicated(id) == TRUE)         # 18 duplicates
+    
+    f4_df <- f4_df %>%
+      distinct() %>%                         # 170 & no more duplicates, check! 
+      select(-study_site)
+    
+
+# Clean up
+    rm(f4_var)
+    rm(f4_list)
+    rm(f4_dup)
+
+```
+
+
+```{r form_6, echo=FALSE}
+
+# Form 6: Hospital Discharge, ADL @ Discharge 
+
+    f6_vars <- c("id", "study_site", "hosp_dc_loc", "hosp_dc_limit", "hosp_dc_covid19", "adl_bath_hosp_dc", "adl_dress_hosp_dc", "adl_toil_hosp_dc", "adl_trans_hosp_dc", "adl_cntine_hosp_dc", "adl_feed_hosp_dc")
+    
+    f6_df <- bsln_data %>% 
+      select(f6_vars)
+    
+    length(unique(f6_df$id))                 # 180, excellent
+    
+    f6_df <- f6_df %>% 
+      mutate(keep = ifelse(rowSums(is.na(f6_df) == TRUE) < 9, 1, 0)) %>%
+      filter(keep == 1) %>% 
+      select(-keep)
+
+# Uniques
+
+    length(unique(f6_df$id))                 # 172, are we missing APICS-C peeps again?
+
+    f6_list <- unique(f6_df[, 1])
+    setdiff(pt_list, f6_list)                # Yep, missing 8 from APICS-C
+
+
+# Duplicates 
+    f6_dup <- f6_df %>% 
+      filter(duplicated(id) == TRUE)         # 18 peeps duplicated 
+    
+    f6_df <- f6_df %>%
+      distinct() %>%                         # down to 173 which means 1 person has non-exactly matching data
+      select(-study_site)
+      
+    f6_dup <- f6_df %>% 
+      filter(duplicated(id) == TRUE)         # 3007 is the non-matching culprit
+    
+    dups <- f6_df %>% 
+      filter(id == 3007)                     # Per Redcap, the discrepant variable adl_feed_hosp_dc should be 1 --> delete row with 0 
+    
+    f6_df <- f6_df[!((f6_df$id %in% f6_dup$id) & f6_df$adl_feed_hosp_dc == 0), ]   # Bye inaccurate duplicate!
+    
+    
+# Clean up
+    rm(f6_vars)
+    rm(f6_list)
+    rm(f6_dup)
+    rm(dups)
 
 
 ```
 
+
+```{r osear_df, echo=FALSE}
+
+# OSEAR: 6mo ADL/IADL Expectations & Importance, Resilience 
+
+    osear_vars_1 <- str_subset(colnames(bsln_data), "osear_", negate=FALSE)    
+
+    osear_vars <- c("id", "study_site", "osear_complete", "osear_1", "osear_2_a", "osear_2_b", "osear_2_c", "osear_2_d", "osear_2_e", "osear_2_f", "osear_2_g", "osear_2_h", "osear_2_i", "osear_2_j", "osear_2_k", "osear_2_l", "osear_2_m", "osear_3_a", "osear_3_b", "osear_3_c", "osear_3_d", "osear_3_e", "osear_3_f", "osear_3_g", "osear_3_h", "osear_3_i", "osear_3_j", "osear_3_k", "osear_3_l", "osear_3_m", "osear_4_a", "osear_4_b", "osear_4_c", "osear_4_d", "osear_4_e", "osear_4_f", "osear_4_g", "osear_4_h", "osear_4_i", "osear_4_j")
+
+    osear_df <- bsln_data %>% 
+      select(osear_vars)
+    
+    length(unique(osear_df$id))                                 # 180! lovely 
+    
+    osear_df <- osear_df %>% 
+      mutate(keep = ifelse(rowSums(is.na(osear_df) == TRUE) < 37, 1, 0)) %>% 
+      filter(keep == 1) %>% 
+      select(-keep)
+    
+# Uniques
+    
+    length(unique(osear_df$id))                                 # 177 what's going on who's missing from the party? 
+    
+    osear_list <- unique(osear_df[, 1])
+    setdiff(pt_list, osear_list)                                # Whoa, some IMC peeps. 2011 2014 2015 
+    
+# Duplicates
+    osear_dup <- osear_df %>% 
+      filter(duplicated(id) == TRUE)                            # 9 duplicates
+    
+    osear_df <- osear_df %>% 
+      distinct() %>% 
+      select(-study_site)
+    
+    osear_dup <- osear_df %>% 
+      filter(duplicated(id) == TRUE)                            # 0 non-matching! yay, bye duplicates 
+    
+    
+    # clean up 
+    rm(osear_vars_1)
+    rm(osear_vars)
+    rm(osear_list) 
+    rm(osear_dup)
+    
+    
+```
+
+
+```{r join, echo=FALSE}
+
+#purrr??? 
+
+data <- list(pt_list, consent_df, f1_df, f2_df, f4_df, f6_df, osear_df) %>% reduce(left_join, by = "id") 
+
+# ayyy it worked, let's see what variables we lost 
+
+setdiff(colnames(bsln_data), colnames(data))
+
+# [1] "osear"           "event"           "instrument"      "instance"        "hosp_dc_limit_y" "hosp_dc_covid19" "edu"             "income"         
+# [9] "adi_dec"         "adi_perc"        "keep" 
+
+
+write.csv(data, "20210305_OSEAR Baseline Data.csv")
+
+
+```
 
 
 
