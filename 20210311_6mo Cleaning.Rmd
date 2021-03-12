@@ -1,0 +1,176 @@
+---
+title: "6mo Cleaning"
+author: "Emma Lee"
+date: "3/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+# 6-Month Data Clean # 
+#### Raw data is sourced from APICS-01 & APICS-C Access databases
+
+# Read in raw data 
+```{r read-in, include=FALSE}
+
+# Baseline Data 
+    bsln_data <- read_csv(here::here("Data", "20210305_OSEAR Baseline Data.csv"))
+
+    bsln_codebook <- read_csv(here::here("Data", "20210306_OSEAR Baseline Codebook.csv"))
+    
+    colnames(bsln_data) <- colnames(bsln_codebook)
+
+# 6 month data 
+    fup_data <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Data.csv"))
+
+    fup_codebook <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Codebook.csv"))
+
+    colnames(fup_data) <- colnames(fup_codebook)
+
+
+
+```
+
+# Pick out baseline expectations for ADLs/IADLs
+```{r bsln_dls, include=FALSE}
+
+vars1 <- c("id", str_subset(colnames(bsln_data), "expect_", negate=FALSE))
+
+expectations <- bsln_data %>% 
+  select(vars1) %>% 
+  select(-expect_groom)
+
+
+rm(vars1)
+
+
+```
+
+# Pick out the 6mo ADLs and IADLs 
+```{r 6mo_dls, include=FALSE}
+
+vars2 <- c("id", str_subset(colnames(fup_data), "adl6_", negate=FALSE))
+
+outcome <- fup_data %>% 
+  select(vars2) %>% 
+  select(-adl6_done, -adl6_admin, -adl6_contin, -iadl6_done, -iadl6_admin, -iadl6_laundry)
+
+
+rm(vars2)
+
+rm(bsln_data)
+rm(bsln_codebook)
+rm(fup_data)
+rm(fup_codebook)
+
+```
+
+
+```{r expectations_met, include=FALSE}
+
+data <- left_join(expectations, outcome)
+
+pt_list <- unique(data[, 1])
+
+## NOTE ON PAIRING EXPECTATION VS. OUTCOME VARIABLES: 
+##    Baseline includes "Grooming - such as brushing teeth or combing your hair" which is not asked in 6mo ADL/IADLs
+##    6mo includes "Continence" (ADL) and "Laundry" (IADL) which are not asked about at Baseline 
+## In total there are 12 Expectation-Outcome variable pairings 
+
+
+# Were the expectations for ADL/IADL at 6mo met exactly? 
+#     Expectation and outcome must be exact matches 
+#     I.e. Expected: No (0),  Outcome: Yes (1) = Expectation NOT met 
+
+met <- data %>% 
+  mutate(expmet_feed = ifelse((expect_feed == adl6_feed), 1, 0)) %>% 
+  mutate(expmet_bath = ifelse((expect_bath == adl6_bath), 1, 0)) %>% 
+  mutate(expmet_dress = ifelse((expect_dress == adl6_dress), 1, 0)) %>% 
+  mutate(expmet_toil = ifelse((expect_toil == adl6_toil), 1, 0)) %>% 
+  mutate(expmet_transf = ifelse((expect_transf == adl6_transf), 1, 0))
+
+met <- met %>% 
+  mutate(expmet_housekeep = ifelse((expect_housekeep == 1 & iadl6_housekeep == 1) | (expect_housekeep == 0 & iadl6_housekeep > 1), 1, 0)) %>% 
+  mutate(expmet_fin = ifelse((expect_fin == 1 & iadl6_fin == 1) | (expect_fin == 0 & iadl6_fin > 1), 1, 0)) %>% 
+  mutate(expmet_transport = ifelse((expect_transport == 1 & iadl6_transport == 1) | (expect_transport == 0 & iadl6_transport > 1), 1, 0)) %>% 
+  mutate(expmet_foodprep = ifelse((expect_foodprep == 1 & iadl6_foodprep == 1) | (expect_foodprep == 0 & iadl6_foodprep > 1), 1, 0)) %>% 
+  mutate(expmet_shop = ifelse((expect_shop == 1 & iadl6_shop == 1) | (expect_shop == 0 & iadl6_shop > 1), 1, 0)) %>% 
+  mutate(expmet_meds = ifelse((expect_meds == 1 & iadl6_meds == 1) | (expect_meds == 0 & iadl6_meds > 1), 1, 0)) %>% 
+  mutate(expmet_phone = ifelse((expect_phone == 1 & iadl6_phone == 1) | (expect_phone == 0 & iadl6_phone > 1), 1, 0)) 
+  
+met <- met %>% 
+  mutate(expmet_score = rowSums(met[, (str_detect(colnames(met), "expmet_") == TRUE)])) %>% 
+  mutate(allmet = ifelse(expmet_score == 12, "Yes", "No")) 
+  
+
+# Were the expectations for ADL/IADL at 6mo met OR exceeded? 
+#     Outcome can match or exceed expectation 
+#     I.e. Expected: No (0), Outcome: Yes (1) = Expectation met/exceeded 
+
+met_exceed <- data %>% 
+  mutate(exceed_feed = ifelse((expect_feed == adl6_feed) | (adl6_feed == 1), 1, 0)) %>% 
+  mutate(exceed_bath = ifelse((expect_bath == adl6_bath) | (adl6_bath == 1), 1, 0)) %>% 
+  mutate(exceed_dress = ifelse((expect_dress == adl6_dress) | (adl6_dress == 1), 1, 0)) %>%
+  mutate(exceed_toil = ifelse((expect_toil == adl6_toil) | (adl6_toil == 1), 1, 0)) %>%
+  mutate(exceed_transf = ifelse((expect_transf == adl6_transf) | (adl6_transf == 1), 1, 0)) 
+  
+met_exceed <- met_exceed %>% 
+  mutate(exceed_housekeep = ifelse((expect_housekeep == 0) | (iadl6_housekeep == 1), 1, 0)) %>%
+  mutate(exceed_fin = ifelse((expect_fin == 0) | (iadl6_fin == 1), 1, 0)) %>%
+  mutate(exceed_transport = ifelse((expect_transport == 0) | (iadl6_transport == 1), 1, 0)) %>%
+  mutate(exceed_foodprep = ifelse((expect_foodprep == 0) | (iadl6_foodprep == 1), 1, 0)) %>%
+  mutate(exceed_shop = ifelse((expect_shop == 0) | (iadl6_shop == 1), 1, 0)) %>%
+  mutate(exceed_meds = ifelse((expect_meds == 0) | (iadl6_meds == 1), 1, 0)) %>%
+  mutate(exceed_phone = ifelse((expect_phone == 0) | (iadl6_phone == 1), 1, 0)) 
+
+met_exceed <- met_exceed %>% 
+  mutate(exceed_score = rowSums(met_exceed[, (str_detect(colnames(met_exceed), "exceed_") == TRUE)])) %>% 
+  mutate(all_exceed = ifelse(exceed_score == 12, "Yes", "No"))
+
+
+# How many ADLs/IADLs can pt do independently at 6mo? Anything other than highest level of independence counts as dependent 
+
+indep <- outcome %>% 
+  mutate(iadl6_phone = ifelse(iadl6_phone == 1, 1, 0)) %>% 
+  mutate(iadl6_shop = ifelse(iadl6_shop == 1, 1, 0)) %>% 
+  mutate(iadl6_foodprep = ifelse(iadl6_foodprep == 1, 1, 0)) %>% 
+  mutate(iadl6_housekeep = ifelse(iadl6_housekeep == 1, 1, 0)) %>% 
+  mutate(iadl6_transport = ifelse(iadl6_transport == 1, 1, 0)) %>% 
+  mutate(iadl6_meds = ifelse(iadl6_meds == 1, 1, 0)) %>% 
+  mutate(iadl6_fin = ifelse(iadl6_fin == 1, 1, 0)) %>% 
+  
+indep <- indep %>% 
+  mutate(num_indep_total = rowSums(indep[, str_detect(colnames(indep), "adl6_") == TRUE])) %>%
+  mutate(num_indep_iadl = rowSums(indep[, str_detect(colnames(indep), "iadl6_") == TRUE])) %>% 
+  mutate(num_indep_adl = (num_indep_total - num_indep_iadl)) 
+
+
+
+
+# Join all them things together 
+expectations_met <- list(pt_list, indep, met, met_exceed) %>% reduce(left_join, by = "id") %>% 
+  select(id, num_indep_adl, num_indep_iadl, num_indep_total, expmet_score, allmet, exceed_score, all_exceed) 
+
+expectations_met <- expectations_met[complete.cases(expectations_met), ]
+
+colnames(expectations_met) <- c("ID", "# Independent ADLs @6mo", "# Independent IADLs @6mo", "# Independent total @6mo", "# Expectations Met", "All expectations met?", "# Expectations Met OR Exceeded", "All expectations met/exceeded?")
+
+write_csv(expectations_met, "20210312_ADL IADL Expected vs. 6mo Outcome.csv")
+
+
+```
+
+
+```{r , include=FALSE}
+
+```

@@ -302,7 +302,7 @@ setdiff(colnames(bsln_data), colnames(data))
 # [9] "adi_dec"         "adi_perc"        "keep" 
 
 
-write.csv(data, "20210305_OSEAR Baseline Data.csv")
+write_csv(data, "20210305_OSEAR Baseline Data.csv")
 
 
 ```

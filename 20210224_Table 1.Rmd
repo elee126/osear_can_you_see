@@ -1,5 +1,5 @@
 ---
-title: "Table 1"
+title: "FCMs & Table 1"
 author: "Emma Lee"
 date: "2/24/2021"
 output: html_document
@@ -17,21 +17,125 @@ library(dplyr)
 library(qwraps2)
 library(janitor)
 library(furniture)
-options(qwraps2_markup = "markdown")
 ```
 
-```{r }
+# Read in the data
+```{r read_in}
 
+data <- read_csv(here::here("Data", "20210305_OSEAR Baseline Data.csv"))
+
+codebook <- read_csv(here::here("Data", "20210306_OSEAR Baseline Codebook.csv"))
+
+colnames(data) <- colnames(codebook)
+
+
+```
+
+# HUS 
+```{r hus, echo=FALSE}
+
+hus_data <- data %>% 
+  select(id, hus_rehab, hus_nursing)
+
+# Missing
+    sum(is.na(hus_data$hus_rehab))                                  # 0 missing
+    sum(is.na(hus_data$hus_nursing))                                # 0 missing
+    
+# Admitted to rehab in 1yr prior to hosp admit
+    sum(hus_data$hus_rehab == 1)                                    # 6 admitted to rehab, 174 not admitted
+    
+# Admitted to nursing home 1yr prior to hosp admit
+    sum(hus_data$hus_nursing == 1)                                  # 0 admitted to nursing home, 180 not admitted 
+
+
+rm(hus_data)
+```
+
+# Baseline ADL/IADL
+```{r bsln_adl_iadl, echo=FALSE}
+
+## ADLs 
+
+bsln_adl <- data %>% 
+  select(id, adl_pt, adl_proxy, adl_bath, adl_dress, adl_toil, adl_trans, adl_cntine, adl_feed) %>% 
+  mutate(adl_score = rowSums(bsln_adl[ ,-(1:3)]))
+
+    # Missing 
+    sum(is.na(bsln_adl[ ,-(1:3)]))                                # 0 missing out of 1440
+    
+    # Overall
+    sum(bsln_adl[ ,-(1:3)] == 1)                                  # 1222 / 1440 independent
+    sum(bsln_adl[ ,-(1:3)] == 0)                                  # 218 / 1440 dependent
+    
+    # Bathing 
+    sum(bsln_adl[ ,4] == 1)                                       # 172 independent
+    sum(bsln_adl[ ,4] == 0)                                       #   8 dependent
+    
+    # Dressing 
+    sum(bsln_adl[ ,5] == 1)                                       # 174 independent
+    sum(bsln_adl[ ,5] == 0)                                       #   6 dependent
+    
+    # Going to Toilet 
+    sum(bsln_adl[ ,6] == 1)                                       # 174 independent
+    sum(bsln_adl[ ,6] == 0)                                       #   6 dependent
+    
+    # Transfer
+    sum(bsln_adl[ ,7] == 1)                                       # 173 independent
+    sum(bsln_adl[ ,7] == 0)                                       #   7 dependent
+    
+    # Continence 
+    sum(bsln_adl[ ,8] == 1)                                       # 170 independent
+    sum(bsln_adl[ ,8] == 0)                                       #   10 dependent
+    
+    # Feeding 
+    sum(bsln_adl[ ,9] == 1)                                       # 179 independent
+    sum(bsln_adl[ ,9] == 0)                                       #   1 dependent
+    
+    # Grades of independence
+    sum(bsln_adl[,10] == 6)                                       # 164 completely independent ADL
+    sum(bsln_adl[,10] < 6)                                        #  16 with any degree of ADL dependency
+    sum(bsln_adl[,10] < 4)                                        #   4 with more than half ADL dependent 
+    sum(bsln_adl[,10] < 1)                                        #   1 pt completely ADL dependent 
+    
+    
+    
+#--------------------------
+
+## IADLs 
+    
+bsln_iadl <- data %>% 
+  select(id, iadl_pt, iadl_proxy, iadl_tel, iadl_shop, iadl_foodprep, iadl_housekeep, iadl_laundry, iadl_transp, iadl_med, iadl_fin)
+
+    # Missing
+    sum(is.na(bsln_iadl[ ,-1]))                                    # 0 missing 
+    
+    # Overall
+    sum(bsln_iadl[ ,-(1:3)] == 1)                                  # 1222 / 1440 independent
+    sum(bsln_iadl[ ,-(1:3)] == 0)                                  # 218 / 1440 dependent
 
 
 
 ```
 
-
-
+# 
 ```{r , echo=FALSE}
 
 
 
 ```
+
+# 
+```{r , echo=FALSE}
+
+
+
+```
+
+
+
+
+
+
+
+
 

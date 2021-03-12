@@ -30,7 +30,7 @@ library(ggplot2)
 ## Read in the Baseline data
 ```{r read_bsln, include=FALSE}
 
-bsln_data <- read_csv(here::here("Data", "20210222_OSEAR APICS01 Bsln.csv"))
+bsln_data <- read_csv(here::here("Data", "20210311_OSEAR APICS01 Bsln.csv"))
 
 # Pull EQ VAS column
     vars <- c("id", "osear_1")
@@ -51,7 +51,7 @@ rm(bsln_data)
 ## Read in the 6mo follow up data 
 ```{r read_6mo, include=FALSE}
 
-f_up_data <- read_csv(here::here("Data", "20210209_APICS01 OSEAR 6mo Data.csv"))
+f_up_data <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Data.csv"))
 
 # Pull EQ VAS column 
     vars2 <- c("p1_subid", "p6_eqol_health")
@@ -67,11 +67,46 @@ rm(vars2)
 rm(f_up_data)
 ```
 
-## Merge datasets 
+## Check for duplicates and merge datasets 
 ```{r merge, include=FALSE}
+
+# BSLN Missings
+    pt_list <- read_csv(here::here("Data", "20210204_OSEAR Enrolled ID List.csv")) %>% 
+      mutate(id = participant_id) %>%
+      select(id)
+
+    bsln_list <- as.data.frame(unique(eqvas_bsln$id))
+    colnames(bsln_list) <- "id"
+
+    setdiff(pt_list, bsln_list)                                 # Missing those 3 IMC pts 2011, 2014, 2015
+    
+# BSLN Duplicated
+    eqvas_bsln <- distinct(eqvas_bsln)
+    
+    bsln_dup <- eqvas_bsln %>% 
+      filter(duplicated(id) == TRUE)                            # Yasss no duplicates
+
+
+# 6MO Missings 
+    
+    fup_list <- as.data.frame(unique(eqvas_6mo$id))
+    colnames(fup_list) <- "id"
+    
+    setdiff(pt_list, fup_list)
+    
+# 6MO Duplicates
+    
+    eqvas_6mo <- distinct(eqvas_6mo)                             # Yasss no duplicates again
+
 
 eqvas_data <- eqvas_bsln %>% 
   left_join(eqvas_6mo)
+
+
+rm(pt_list)
+rm(bsln_list)
+rm(bsln_dup)
+rm(fup_list)
 
 ```
 
@@ -79,9 +114,9 @@ eqvas_data <- eqvas_bsln %>%
 ```{r summary}
 
 # Counts 
-    sum(!is.na(eqvas_data$eqvas_dc))        # 170 baseline 
-    sum(!is.na(eqvas_data$eqvas_6mo))       # 117 complete @ 6mo
-    sum(is.na(eqvas_data$eqvas_6mo))        # 53 missing @ 6mo
+    sum(!is.na(eqvas_data$eqvas_dc))        # 177 baseline 
+    sum(!is.na(eqvas_data$eqvas_6mo))       # 125 complete @ 6mo
+    sum(is.na(eqvas_data$eqvas_6mo))        # 52 missing @ 6mo
 
 # Baseline summary stats 
 
@@ -142,12 +177,19 @@ eqvas_data <- eqvas_bsln %>%
 
 # Counts of changes
     
-    sum(!is.na(change_data$diff))                # 117 complete @ 6mo
+    sum(!is.na(change_data$diff))                # 125 complete @ 6mo
     nrow(change_data[change_data$diff > 0,])     # 27 perceived > expected 
-    nrow(change_data[change_data$diff == 0,])    # 20 perceived = expected
+    nrow(change_data[change_data$diff == 0,])    # 25 perceived = expected
+    nrow(change_data[change_data$diff < 0,])     # 75 perceived < expected
     
-    nrow(change_data[change_data$diff < 0,])     # 70 perceived < expected
-    nrow(change_data[change_data$diff < -8,])    # 59 perceived < expected by more than 8 points 
+    nrow(change_data[change_data$diff > 8, ])    # 16 perceived > expected by more than 8 points 
+    nrow(change_data[change_data$diff < -8,])    # 64 perceived < expected by more than 8 points 
+    
+    nrow(change_data[change_data$diff > 10, ])   # 11 perceived > expected by more than 10 points 
+    nrow(change_data[change_data$diff < -10,])   # 51 perceived < expected by more than 10 points
+    
+    nrow(change_data[change_data$diff > 20, ])   #  2 perceived > expected by more than 20 points 
+    nrow(change_data[change_data$diff < -20,])   # 24 perceived < expected by more than 20 points
 
     
     hist(change_data$diff, 
@@ -184,17 +226,20 @@ eqvas_data <- eqvas_bsln %>%
     data <- data %>% 
       left_join(change_data)
     
+    # Select complete cases 
+    data <- data[complete.cases(data), ]
+    
 
 # Base R version of the spaghetti plot 
-    interaction.plot(x.factor = data$timepoint, 
-                     trace.factor = data$id, 
-                     response = data$value, 
-                     ylab = "% of Full Health",
-                     xlab = "Timepoint",
-                     lty = 1, 
-                     lwd = 1, 
-                     legend = FALSE
-                     ) 
+#    interaction.plot(x.factor = data$timepoint, 
+#                     trace.factor = data$id, 
+#                     response = data$value, 
+#                     ylab = "% of Full Health",
+#                     xlab = "Timepoint",
+#                     lty = 1, 
+#                     lwd = 1, 
+#                     legend = FALSE
+#                     ) 
     # meh
 
     
