@@ -25,18 +25,13 @@ library(janitor)
 
 # Baseline Data 
     bsln_data <- read_csv(here::here("Data", "20210305_OSEAR Baseline Data.csv"))
-
     bsln_codebook <- read_csv(here::here("Data", "20210306_OSEAR Baseline Codebook.csv"))
-    
     colnames(bsln_data) <- colnames(bsln_codebook)
 
 # 6 month data 
     fup_data <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Data.csv"))
-
     fup_codebook <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Codebook.csv"))
-
     colnames(fup_data) <- colnames(fup_codebook)
-
 
 
 ```
@@ -52,8 +47,7 @@ expectations <- bsln_data %>%
 
 
 rm(vars1)
-
-
+rm(bsln_data, bsln_codebook)
 ```
 
 # Pick out the 6mo ADLs and IADLs 
@@ -68,14 +62,9 @@ outcome <- fup_data %>%
 
 rm(vars2)
 
-rm(bsln_data)
-rm(bsln_codebook)
-rm(fup_data)
-rm(fup_codebook)
-
 ```
 
-
+# Determine whether expectations were met or met/exceeded, count # independent ADL/IADLs
 ```{r expectations_met, include=FALSE}
 
 data <- left_join(expectations, outcome)
@@ -147,7 +136,7 @@ indep <- outcome %>%
   mutate(iadl6_housekeep = ifelse(iadl6_housekeep == 1, 1, 0)) %>% 
   mutate(iadl6_transport = ifelse(iadl6_transport == 1, 1, 0)) %>% 
   mutate(iadl6_meds = ifelse(iadl6_meds == 1, 1, 0)) %>% 
-  mutate(iadl6_fin = ifelse(iadl6_fin == 1, 1, 0)) %>% 
+  mutate(iadl6_fin = ifelse(iadl6_fin == 1, 1, 0)) 
   
 indep <- indep %>% 
   mutate(num_indep_total = rowSums(indep[, str_detect(colnames(indep), "adl6_") == TRUE])) %>%
@@ -161,13 +150,13 @@ indep <- indep %>%
 expectations_met <- list(pt_list, indep, met, met_exceed) %>% reduce(left_join, by = "id") %>% 
   select(id, num_indep_adl, num_indep_iadl, num_indep_total, expmet_score, allmet, exceed_score, all_exceed) 
 
-expectations_met <- expectations_met[complete.cases(expectations_met), ]
+#expectations_met <- expectations_met[complete.cases(expectations_met), ]
 
-colnames(expectations_met) <- c("ID", "# Independent ADLs @6mo", "# Independent IADLs @6mo", "# Independent total @6mo", "# Expectations Met", "All expectations met?", "# Expectations Met OR Exceeded", "All expectations met/exceeded?")
+#colnames(expectations_met) <- c("ID", "# Independent ADLs @6mo", "# Independent IADLs @6mo", "# Independent total @6mo", "# Expectations Met", "All expectations met?", "# Expectations Met OR Exceeded", "All expectations met/exceeded?")
 
-write_csv(expectations_met, "20210312_ADL IADL Expected vs. 6mo Outcome.csv")
+#write_csv(expectations_met, "20210312_ADL IADL Expected vs. 6mo Outcome.csv")
 
-
+rm(data, expectations, outcome, met, indep, met_exceed)
 ```
 
 # WHOQOL-BREF subset 
@@ -180,6 +169,8 @@ whoq_data <- fup_data %>%
   select(-OSEAR_6mo1_whoqol_done)
 
 colnames(whoq_data) <- c("id", "qol", "satisf", "pain", "med", "enjoy", "mean", "concent", "safe", "phys", "energ", "appear", "mon", "avail", "leis", "around", "sleep", "adl", "work", "self", "relat", "sex", "frenz", "livplace", "health", "transport", "blues")
+
+rm(vars3)
 
 ```
 
@@ -211,14 +202,35 @@ colnames(whoq_data) <- c("id", "qol", "satisf", "pain", "med", "enjoy", "mean", 
 #     D3 (2 Qs) = 20 relat, 21 sex , 22 frenz
 #     D4 (6 Qs) = 8 safe, 9 phys, 12 mon, 13 avail, 14 leis, 23 livplace, 24 health, 25 transport
 
-whoq_data <- whoq_data %>% 
+whoq_scores <- whoq_data %>% 
   dplyr::mutate(d1_score = 4*rowMeans(whoq_data[, c('pain', 'med', 'energ', 'around', 'sleep', 'adl', 'work')], na.rm = TRUE)) %>% 
   dplyr::mutate(d2_score = 4*rowMeans(whoq_data[, c('enjoy', 'mean', 'concent', 'appear', 'self', 'blues')], na.rm = TRUE)) %>% 
   dplyr::mutate(d3_score = 4*rowMeans(whoq_data[, c('relat', 'sex', 'frenz')], na.rm = TRUE)) %>% 
   dplyr::mutate(d4_score = 4*rowMeans(whoq_data[, c('safe', 'phys', 'mon', 'avail', 'leis', 'livplace', 'health', 'transport')], na.rm = TRUE))
 
+# Round off those decimals 
+whoq_scores <- whoq_scores %>% 
+  round(digits=1) %>% 
+  select(id, d1_score, d2_score, d3_score, d4_score)
 
-# Look at the data! 
+    
+rm(var, fup_data, fup_codebook)
+```
+
+
+# Quick export for Alison's grant analysis 
+```{r adl_iadl_whoq, include=FALSE}
+
+quexport <- left_join(expectations_met, whoq_scores)
+
+write_csv(quexport, "20210315_ADL IADL WHOQ Prelim Export.csv")
+
+
+```
+
+
+# Look at WHOQOL data
+```{r whoq_summaries, echo = FALSE}
 
 ## D1: Physical Health 
 summary(whoq_data$d1_score)
@@ -255,66 +267,9 @@ hist(whoq_data$d4_score,
      xlim = c(4, 20), 
      ylim = c(0, 50), 
      breaks = 8)
-    
-    
 
 
 ```
-
-# Qualitative whoqol-bref
-```{r whoq_qualitative, include=FALSE}
-# Relabel responses as qualitative 
-#     Piped for-loop
-whoq_qual_data <- whoq_data  
-
-for(var in c('pain', 'med', 'enjoy', 'mean', 'concent', 'safe', 'phys', 'energ', 'appear', 'mon', 'avail', 'leis')) {
-    whoq_qual_data <- whoq_qual_data %>% 
-        dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
-                                  get(var) == 1 ~ "Not at all", 
-                                  get(var) == 2 ~ "A little", 
-                                  get(var) == 3 ~ "A moderate amount", 
-                                  get(var) == 4 ~ "Very much", 
-                                  get(var) == 5 ~ "An extreme amount", 
-                                  TRUE ~ "other"))
-  }
-  
-for(var in c('qol', 'satisf', 'around')) {
-  whoq_qual_data <- whoq_qual_data %>% 
-    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
-                                           get(var) == 1 ~ "Very poor", 
-                                           get(var) == 2 ~ "Poor", 
-                                           get(var) == 3 ~ "Neither poor nor good", 
-                                           get(var) == 4 ~ "Good", 
-                                           get(var) == 5 ~ "Very good", 
-                                           TRUE ~ "other"))
-}
-
-for(var in c('sleep', 'adl', 'work', 'self', 'relat', 'sex', 'frenz', 'livplace', 'health', 'transport')) {
-  whoq_qual_data <- whoq_qual_data %>% 
-    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
-                                     get(var) == 1 ~ "Very dissatisfied", 
-                                     get(var) == 2 ~ "Dissatisfied", 
-                                     get(var) == 3 ~ "Neither satisfied nor dissatisfied", 
-                                     get(var) == 4 ~ "Satisfied", 
-                                     get(var) == 5 ~ "Very satisfied", 
-                                     TRUE ~ "other"))
-}
-
-whoq_qual_data <- whoq_qual_data %>% 
-  mutate(blues = case_when(is.na(blues) ~ "Missing", 
-                           blues == 1 ~ "Never", 
-                           blues == 2 ~ "Seldom", 
-                           blues == 3 ~ "Quite often", 
-                           blues == 4 ~ "Very often", 
-                           blues == 5 ~ "Always", 
-                           TRUE ~ "other"))
-
-
-
-
-```
-
-
 
 
 
