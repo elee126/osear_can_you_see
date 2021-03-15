@@ -170,7 +170,159 @@ write_csv(expectations_met, "20210312_ADL IADL Expected vs. 6mo Outcome.csv")
 
 ```
 
+# WHOQOL-BREF subset 
+```{r whoq_subset, include=FALSE}
 
-```{r , include=FALSE}
+vars3 <- c("id", str_subset(colnames(fup_data), "OSEAR_6mo1_", negate=FALSE))
+
+whoq_data <- fup_data %>% 
+  select(vars3) %>% 
+  select(-OSEAR_6mo1_whoqol_done)
+
+colnames(whoq_data) <- c("id", "qol", "satisf", "pain", "med", "enjoy", "mean", "concent", "safe", "phys", "energ", "appear", "mon", "avail", "leis", "around", "sleep", "adl", "work", "self", "relat", "sex", "frenz", "livplace", "health", "transport", "blues")
 
 ```
+
+# WHOQOL-BREF Scoring
+```{r whoq_score, include=FALSE}
+
+# Verify appropriate ranges for each answer 
+    range_who <- whoq_data %>% 
+      select(-id)
+
+    stopifnot(range(range_who, na.rm = TRUE) == c(1, 5))
+    
+    rm(range_who)
+
+# Flip reverse-coded questions 
+    for(var in c('pain', 'med', 'blues')) {
+      whoq_data <- whoq_data %>% 
+       dplyr::mutate(!!var := case_when(get(var) == 1 ~ 5, 
+                                     get(var) == 2 ~ 4, 
+                                     get(var) == 3 ~ 3, 
+                                     get(var) == 4 ~ 2, 
+                                     get(var) == 5 ~ 1))
+    }
+   
+     
+# Domain raw scores: D1 physical health, D2 psychological health, D3 social relationships, D4 environment
+#     D1 (6 Qs) = 3 pain, 4 med, 10 energ, 15 around, 16 sleep, 17 adl, 18 work
+#     D2 (5 Qs) = 5 enjoy, 6 mean, 7 concent, 11 appear, 19 self, 26 blues
+#     D3 (2 Qs) = 20 relat, 21 sex , 22 frenz
+#     D4 (6 Qs) = 8 safe, 9 phys, 12 mon, 13 avail, 14 leis, 23 livplace, 24 health, 25 transport
+
+whoq_data <- whoq_data %>% 
+  dplyr::mutate(d1_score = 4*rowMeans(whoq_data[, c('pain', 'med', 'energ', 'around', 'sleep', 'adl', 'work')], na.rm = TRUE)) %>% 
+  dplyr::mutate(d2_score = 4*rowMeans(whoq_data[, c('enjoy', 'mean', 'concent', 'appear', 'self', 'blues')], na.rm = TRUE)) %>% 
+  dplyr::mutate(d3_score = 4*rowMeans(whoq_data[, c('relat', 'sex', 'frenz')], na.rm = TRUE)) %>% 
+  dplyr::mutate(d4_score = 4*rowMeans(whoq_data[, c('safe', 'phys', 'mon', 'avail', 'leis', 'livplace', 'health', 'transport')], na.rm = TRUE))
+
+
+# Look at the data! 
+
+## D1: Physical Health 
+summary(whoq_data$d1_score)
+hist(whoq_data$d1_score, 
+     main = "WHOQOL-BREF D1: Physical Health", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 8)
+
+## D2: Psychological Health 
+summary(whoq_data$d2_score)
+hist(whoq_data$d2_score, 
+     main = "WHOQOL-BREF D2: Psychological Health", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 5)
+
+## D3: Social Relationships 
+summary(whoq_data$d3_score)
+hist(whoq_data$d3_score, 
+     main = "WHOQOL-BREF D3: Social Relationships", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 8)
+
+## D4: Environment
+summary(whoq_data$d4_score)
+hist(whoq_data$d4_score, 
+     main = "WHOQOL-BREF D4: Environment", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 8)
+    
+    
+
+
+```
+
+# Qualitative whoqol-bref
+```{r whoq_qualitative, include=FALSE}
+# Relabel responses as qualitative 
+#     Piped for-loop
+whoq_qual_data <- whoq_data  
+
+for(var in c('pain', 'med', 'enjoy', 'mean', 'concent', 'safe', 'phys', 'energ', 'appear', 'mon', 'avail', 'leis')) {
+    whoq_qual_data <- whoq_qual_data %>% 
+        dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                  get(var) == 1 ~ "Not at all", 
+                                  get(var) == 2 ~ "A little", 
+                                  get(var) == 3 ~ "A moderate amount", 
+                                  get(var) == 4 ~ "Very much", 
+                                  get(var) == 5 ~ "An extreme amount", 
+                                  TRUE ~ "other"))
+  }
+  
+for(var in c('qol', 'satisf', 'around')) {
+  whoq_qual_data <- whoq_qual_data %>% 
+    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                           get(var) == 1 ~ "Very poor", 
+                                           get(var) == 2 ~ "Poor", 
+                                           get(var) == 3 ~ "Neither poor nor good", 
+                                           get(var) == 4 ~ "Good", 
+                                           get(var) == 5 ~ "Very good", 
+                                           TRUE ~ "other"))
+}
+
+for(var in c('sleep', 'adl', 'work', 'self', 'relat', 'sex', 'frenz', 'livplace', 'health', 'transport')) {
+  whoq_qual_data <- whoq_qual_data %>% 
+    dplyr::mutate(!!var := case_when(is.na(get(var)) ~ "Missing", 
+                                     get(var) == 1 ~ "Very dissatisfied", 
+                                     get(var) == 2 ~ "Dissatisfied", 
+                                     get(var) == 3 ~ "Neither satisfied nor dissatisfied", 
+                                     get(var) == 4 ~ "Satisfied", 
+                                     get(var) == 5 ~ "Very satisfied", 
+                                     TRUE ~ "other"))
+}
+
+whoq_qual_data <- whoq_qual_data %>% 
+  mutate(blues = case_when(is.na(blues) ~ "Missing", 
+                           blues == 1 ~ "Never", 
+                           blues == 2 ~ "Seldom", 
+                           blues == 3 ~ "Quite often", 
+                           blues == 4 ~ "Very often", 
+                           blues == 5 ~ "Always", 
+                           TRUE ~ "other"))
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
