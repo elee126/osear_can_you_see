@@ -1,5 +1,5 @@
 ---
-title: "6mo Cleaning"
+title: "ADL IADL WHOQOL"
 author: "Emma Lee"
 date: "3/11/2021"
 output: html_document
@@ -17,8 +17,10 @@ library(dplyr)
 library(janitor)
 ```
 
-# 6-Month Data Clean # 
-#### Raw data is sourced from APICS-01 & APICS-C Access databases
+# BSLN to 6mo ADL/IADL + WHOQOL-BREF Scores # 
+#### Quick data pull for grant work 
+####    Baseline data sourced from cleaned output from 20210223_Bsln Cleaning.Rmd 
+####    6mo Data sourced from Access database 
 
 # Read in raw data 
 ```{r read-in, include=FALSE}
@@ -150,11 +152,6 @@ indep <- indep %>%
 expectations_met <- list(pt_list, indep, met, met_exceed) %>% reduce(left_join, by = "id") %>% 
   select(id, num_indep_adl, num_indep_iadl, num_indep_total, expmet_score, allmet, exceed_score, all_exceed) 
 
-#expectations_met <- expectations_met[complete.cases(expectations_met), ]
-
-#colnames(expectations_met) <- c("ID", "# Independent ADLs @6mo", "# Independent IADLs @6mo", "# Independent total @6mo", "# Expectations Met", "All expectations met?", "# Expectations Met OR Exceeded", "All expectations met/exceeded?")
-
-#write_csv(expectations_met, "20210312_ADL IADL Expected vs. 6mo Outcome.csv")
 
 rm(data, expectations, outcome, met, indep, met_exceed)
 ```
@@ -221,9 +218,9 @@ rm(var, fup_data, fup_codebook)
 # Quick export for Alison's grant analysis 
 ```{r adl_iadl_whoq, include=FALSE}
 
-quexport <- left_join(expectations_met, whoq_scores)
+export <- left_join(expectations_met, whoq_scores)
 
-write_csv(quexport, "20210315_ADL IADL WHOQ Prelim Export.csv")
+write_csv(export, "20210315_ADL IADL WHOQ Prelim Export.csv")
 
 
 ```
