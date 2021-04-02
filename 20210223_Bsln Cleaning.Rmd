@@ -23,7 +23,7 @@ library(janitor)
 # Read in data 
 ```{r read-in, include=FALSE}
 
-bsln_data <- read_csv(here::here("Data", "20210224_OSEAR APICS01 Bsln.csv"))
+bsln_data <- read_csv(here::here("Data", "20210331_OSEAR APICS01 Bsln Raw.csv"))
     
 # Toss rows that contain no data 
     bsln_data <- bsln_data %>% 
@@ -245,9 +245,7 @@ bsln_data <- read_csv(here::here("Data", "20210224_OSEAR APICS01 Bsln.csv"))
 
 # OSEAR: 6mo ADL/IADL Expectations & Importance, Resilience 
 
-    osear_vars_1 <- str_subset(colnames(bsln_data), "osear_", negate=FALSE)    
-
-    osear_vars <- c("id", "study_site", "osear_complete", "osear_1", "osear_2_a", "osear_2_b", "osear_2_c", "osear_2_d", "osear_2_e", "osear_2_f", "osear_2_g", "osear_2_h", "osear_2_i", "osear_2_j", "osear_2_k", "osear_2_l", "osear_2_m", "osear_3_a", "osear_3_b", "osear_3_c", "osear_3_d", "osear_3_e", "osear_3_f", "osear_3_g", "osear_3_h", "osear_3_i", "osear_3_j", "osear_3_k", "osear_3_l", "osear_3_m", "osear_4_a", "osear_4_b", "osear_4_c", "osear_4_d", "osear_4_e", "osear_4_f", "osear_4_g", "osear_4_h", "osear_4_i", "osear_4_j")
+    osear_vars <- c("id", "study_site", str_subset(colnames(bsln_data), "osear_", negate=FALSE))
 
     osear_df <- bsln_data %>% 
       select(osear_vars)
@@ -302,7 +300,7 @@ setdiff(colnames(bsln_data), colnames(data))
 # [9] "adi_dec"         "adi_perc"        "keep" 
 
 
-write_csv(data, "20210305_OSEAR Baseline Data.csv")
+write_csv(data, "20210331_OSEAR Baseline Data.csv")
 
 
 ```

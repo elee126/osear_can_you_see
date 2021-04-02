@@ -1,0 +1,794 @@
+---
+title: "FCMs & Table 1"
+author: "Emma Lee"
+date: "2/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(qwraps2)
+library(janitor)
+library(furniture)
+library(beeswarm)
+library(ggplot2)
+```
+
+## Read in the data
+```{r read_in, echo=FALSE, include = FALSE}
+
+data <- read_csv(here::here("Data", "20210331_OSEAR Baseline Data.csv"))
+
+codebook <- read_csv(here::here("Data", "20210401_OSEAR Baseline Codebook.csv"))
+
+colnames(data) <- colnames(codebook)
+
+rm(codebook)
+```
+
+# HUS 
+```{r hus, results="hide"}
+
+hus_data <- data %>% 
+  select(id, hus_rehab, hus_nursing)
+
+# Missing
+    sum(is.na(hus_data$hus_rehab))                                  # 0 missing rehab
+    sum(is.na(hus_data$hus_nursing))                                # 0 missing nursing
+    
+# Rehab admit in 1yr prior to hospitalization
+    sum(hus_data$hus_rehab == 1)                                    # 6/180 admitted to rehab 
+    
+# Nursing home admit in 1yr prior to hospitalization 
+    sum(hus_data$hus_nursing == 1)                                  # 0/180 admitted to nursing home
+
+
+
+```
+
+# Baseline ADLs
+```{r bsln_adl, results="hide"}
+
+## ADLs 
+
+bsln_adl <- data %>% 
+  select(id, adl_bath, adl_dress, adl_toil, adl_trans, adl_cntine, adl_feed)
+bsln_adl <- bsln_adl %>%
+  mutate(adl_score = rowSums(bsln_adl[, -1]))
+
+
+    # Missing 
+    sum(is.na(bsln_adl[,-1]))                                # 0 missing out of 1440
+    
+    # Degrees of independence
+    sum(bsln_adl[,8] == 6)                                       # 164 completely independent ADL
+    sum(bsln_adl[,8] < 6)                                        #  16 with any degree of ADL dependency
+    sum(bsln_adl[,8] < 4)                                        #   6 with more than half ADL dependent 
+    sum(bsln_adl[,8] < 1)                                        #   1 pt completely ADL dependent 
+
+    # Count of Indep vs. Dep in each activity  
+    colSums(bsln_adl[, 2:7])
+          #                        independent            dependent
+          #           adl_bath     172                    8
+          #           adl_dress    174                    6
+          #           adl_toil     174                    6
+          #           adl_trans    173                    7
+          #           adl_cntine   170                    10
+          #           adl_feed     179                    1    
+    
+    
+
+```
+
+```{r adl_graph, echo=FALSE}
+
+    # Visualize Baseline ADLs
+
+        # Independents 
+        df <- data.frame(indep = colSums(bsln_adl[ , 2:7]))
+        
+        rownames(df) <- c("Bathing", "Continence", "Dressing", "Feeding", "Toileting", "Transferring")
+        df <- df %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Independent") 
+        colnames(df) <- c("adl", "participants", "status")
+        
+        # Dependents 
+        df2 <- data.frame(dep = 180 - colSums(bsln_adl[ ,2:7]))
+        
+        rownames(df2) <- c("Bathing", "Continence", "Dressing", "Feeding", "Toileting", "Transferring")
+        df2 <- df2 %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Dependent") 
+        colnames(df2) <- c("adl", "participants", "status")
+        
+        # Merge
+        df3 <- rbind(df, df2)
+
+        
+    ggplot(df3, aes(fill = status, y = participants, x = adl)) + 
+      geom_bar(position="stack", stat="identity") + 
+      ggtitle("ADL Status Prior to Hospitalization") + 
+      xlab("Activity of Daily Living") + 
+      ylab("# of Participants") + 
+      theme_bw()
+
+    
+    
+rm(df, df2, df3)
+
+```
+
+
+# Baseline IADLs
+```{r bsln_iadl, results="hide"}
+
+## IADLs 
+    
+bsln_iadl <- data %>% 
+  select(id, str_subset(colnames(data), "iadl_"), -iadl_pt, -iadl_proxy)
+
+# Recode as binary df 
+# For sensitivity, change cutoff. --> in get(var) == 1 / get(var) > 1, replace 1 with 2
+iadl_binary <- bsln_iadl 
+    for(var in c("iadl_tel", "iadl_shop", "iadl_foodprep", "iadl_housekeep", "iadl_laundry", "iadl_transp", "iadl_med", "iadl_fin")) {
+      iadl_binary <- iadl_binary %>% 
+        dplyr::mutate(!!var := case_when(get(var) == 1 ~ 1, 
+                                         get(var) > 1 ~ 0))
+    }
+      
+# Score IADLs 
+iadl_binary <- iadl_binary %>% 
+  mutate(iadl_score = rowSums(bsln_iadl[, -1]))
+
+    # Missing
+    sum(is.na(bsln_iadl[ ,-1]))                                 # 0 missing 
+    
+    # Counts
+    colSums(iadl_binary[,2:9])
+  
+        #                             independent             dependent
+        #             iadl_tel         179                    1
+        #             iadl_shop        153                    27
+        #             iadl_foodprep    156                    24
+        #             iadl_housekeep   149                    31
+        #             iadl_laundry     158                    22
+        #             iadl_transp      163                    17
+        #             iadl_med         169                    11
+        #             iadl_fin         169                    11
+
+```
+    
+```{r bsln_iadl_graph, echo=FALSE}
+
+    # Visualizing 
+    
+        # Independent
+        df <- data.frame(indep = colSums(iadl_binary[,2:9]))
+        rownames(df) <- c("Phone", "Shop", "Cook", "Housekeep", "Laundry", "Transportation", "Medication", "Finances")
+        df <- df %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Independent") 
+        colnames(df) <- c("iadl", "participants", "status")
+        
+        # Dependents 
+        df2 <- data.frame(dep = 180 - colSums(iadl_binary[ ,2:9]))
+        
+        rownames(df2) <- c("Phone", "Shop", "Cook", "Housekeep", "Laundry", "Transportation", "Medication", "Finances")
+        df2 <- df2 %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Dependent") 
+        colnames(df2) <- c("iadl", "participants", "status")
+        
+        # Merge
+        df3 <- rbind(df, df2)
+
+        
+    ggplot(df3, aes(fill = status, y = participants, x = iadl)) + 
+      geom_bar(position="stack", stat="identity") + 
+      ggtitle("IADL Status Prior to Hospitalization") + 
+      xlab("Instrumental Activity of Daily Living") + 
+      ylab("# of Participants") + 
+      theme_bw()
+        
+        
+rm(var, df, df2, df3)
+
+```
+
+# Clinical Frailty Scale 
+```{r cfs, echo=FALSE}
+cfs_data <- data %>% 
+  select(id, cfs, demogr_sex, demogr_age)
+
+    # Missing
+    sum(is.na(cfs_data[ ,2]))                                     # 0 missing ! 
+
+    # Summary (range 1-8)
+    summary(cfs_data$cfs)
+    hist(cfs_data$cfs, 
+         main = "Clinical Frailty Score 2wks Preceding Hospitalization", 
+         xlab = "CFS Score", 
+         xlim = c(1,8), 
+         breaks = 8)
+
+# Bees? 
+    
+    # Create age bins 
+    cfs_data <- cfs_data %>% 
+      mutate(age_grp = ifelse(demogr_age < 45, 1, NA)) %>% 
+      mutate(age_grp = ifelse(demogr_age > 44 & demogr_age < 66, 2, age_grp)) %>% 
+      mutate(age_grp = ifelse(demogr_age > 65, 3, age_grp))
+      
+    
+    # Overall, colour by sex 
+    beeswarm(cfs_data$cfs,  
+             pch = 16, 
+             pwcol = 5 + (cfs_data$demogr_sex), 
+             ylab = "Clinical Frailty Score", 
+             main = "CFS Prior to Hospitalization", 
+             ylim = c(1,8))
+    
+    # Split by sex 
+    beeswarm(cfs_data$cfs ~ cfs_data$demogr_sex,  
+             pch = 16, 
+             pwcol = 5 + (cfs_data$demogr_sex), 
+             xlab = "Sex", ylab = "Clinical Frailty Score", 
+             labels = c("Male", "Female"), 
+             main = "CFS Prior to Hospitalization", 
+             ylim = c(1,8))
+    
+    # Overall, colour by age group
+    beeswarm(cfs_data$cfs,  
+             pch = 16, 
+             pwcol = 2 + (cfs_data$age_grp), 
+             ylab = "Clinical Frailty Score", 
+             main = "CFS Prior to Hospitalization", 
+             ylim = c(1,8))
+    
+    # Attempting split by age 
+    beeswarm(cfs_data$cfs ~ cfs_data$age_grp,  
+             pch = 16, 
+             pwcol = 2 + (cfs_data$age_grp), 
+             xlab = "Age Group", ylab = "Clinical Frailty Score", 
+             labels = c("18-44", "45-65", "65+"), 
+             main = "CFS Prior to Hospitalization", 
+             ylim = c(1,8))
+        
+
+    
+
+```
+
+
+# MSPSS  
+```{r mspss, echo = FALSE}
+
+mspss_data <- data %>% 
+  select(id, str_subset(colnames(data), "mspss"))
+
+mspss_data <- mspss_data %>% 
+  mutate(mspss_total_score = rowSums(mspss_data[ ,-1])) %>% 
+  mutate(mspss_so_score = rowSums(mspss_data[ ,str_subset(colnames(mspss_data), "_so")])) %>% 
+  mutate(mspss_fr_score = rowSums(mspss_data[ ,str_subset(colnames(mspss_data), "_fr")])) %>% 
+  mutate(mspss_fam_score = rowSums(mspss_data[ ,str_subset(colnames(mspss_data), "_fam")])) 
+  
+    # Missing
+    sum(is.na(mspss_data[ ,-1]))                                # 0 missing yas
+
+    ## Total Score Summary 
+        summary(mspss_data$mspss_total_score)  
+        hist(mspss_data$mspss_total_score, 
+         main = "MSPSS Total Score", 
+         xlab = "Score (0-84)", 
+         xlim = c(0, 84), 
+         ylim = c(0, 80), 
+         breaks = 8)
+        
+    ## Significant Other Score Summary 
+        summary(mspss_data$mspss_so_score)   
+        hist(mspss_data$mspss_so_score, 
+         main = "MSPSS Significant Other Score", 
+         xlab = "Score (0-28)", 
+         xlim = c(0, 28), 
+         ylim = c(0, 80))
+        
+    ## Friends Score Summary 
+        summary(mspss_data$mspss_fr_score)  
+        hist(mspss_data$mspss_fr_score, 
+         main = "MSPSS Friend Score", 
+         xlab = "Score(0-28)", 
+         xlim = c(0, 28), 
+         ylim = c(0, 80),)
+        
+    ## Family Score Summary 
+        summary(mspss_data$mspss_fam_score)  
+        hist(mspss_data$mspss_fam_score, 
+         main = "MSPSS Family Score", 
+         xlab = "Score (0-28)", 
+         xlim = c(0, 28), 
+         ylim = c(0, 80))
+
+
+    
+```
+
+
+# Demographics
+```{r demographics, echo=FALSE}
+
+dem_data <- data %>% 
+  select(id, str_subset(colnames(data), "demogr_"), -demogr_hosp_ad_dx) 
+
+dem_data <- dem_data %>% 
+  mutate(demogr_sex = ifelse(demogr_sex == 1, "Male", demogr_sex)) %>% 
+  mutate(demogr_sex = ifelse(demogr_sex == 2, "Female", demogr_sex)) %>% 
+  mutate(demogr_race = case_when(is.na(demogr_race) ~ as.character(NA), 
+                                 demogr_race == 1 ~ "Asian", 
+                                 demogr_race == 2 ~ "Black", 
+                                 demogr_race == 3 ~ "American Indian / Alaska Native", 
+                                 demogr_race == 4 ~ "White", 
+                                 demogr_race == 5 ~ "Native Hawaiian / Pacific Islander", 
+                                 demogr_race == 6 ~ "More than one race", 
+                                 demogr_race == 7 ~ "Unknown",
+                                 TRUE ~ "??")) %>% 
+  mutate(demogr_ethni = ifelse(demogr_ethni == 0, "Not Hispanic or Latino", demogr_ethni)) %>% 
+  mutate(demogr_ethni = ifelse(demogr_ethni == 1, "Hispanic or Latino", demogr_ethni)) %>% 
+  mutate(demogr_ethni = ifelse(demogr_ethni == 2, "Unknown", demogr_ethni))
+  
+
+    # Missing 
+    sum(is.na(dem_data[,-1]))                                         # Missing 40 from APICS-COVID crew of 8
+    
+    # Summarize 
+      ## Sex
+      count(dem_data$demogr_sex)
+      ## Race 
+      count(dem_data$demogr_race)
+      ## Ethnicity 
+      count(dem_data$demogr_ethni)
+      
+
+
+```
+
+# Admission Dx & Sx Status
+```{r hosp_admit, echo=FALSE}
+
+admit_data <- data %>% 
+  select(id, demogr_hosp_ad_dx, ap_surg)
+
+admit_data <- admit_data %>% 
+  mutate(dx = case_when(is.na(demogr_hosp_ad_dx) ~ as.character(NA), 
+                        demogr_hosp_ad_dx == 1 ~ "Cardiovascular", 
+                        demogr_hosp_ad_dx == 2 ~ "Central Nervous System", 
+                        demogr_hosp_ad_dx == 3 ~ "Dermatology", 
+                        demogr_hosp_ad_dx == 4 ~ "Ears/Nose/Throat", 
+                        demogr_hosp_ad_dx == 5 ~ "Endocrine", 
+                        demogr_hosp_ad_dx == 6 ~ "Gastrointestinal", 
+                        demogr_hosp_ad_dx == 7 ~ "Hematology", 
+                        demogr_hosp_ad_dx == 8 ~ "HIV/AIDS", 
+                        demogr_hosp_ad_dx == 9 ~ "Infectious Disease (excluding HIV/AIDS & pneumonia & sepsis", 
+                        demogr_hosp_ad_dx == 10 ~ "Nephrology/Urology", 
+                        demogr_hosp_ad_dx == 11 ~ "Obstetrics/Gynecology", 
+                        demogr_hosp_ad_dx == 12 ~ "Oncology (including hematologic malignancies)", 
+                        demogr_hosp_ad_dx == 13 ~ "Ophthalmology", 
+                        demogr_hosp_ad_dx == 14 ~ "Plastic Surgery", 
+                        demogr_hosp_ad_dx == 15 ~ "Psychiatry", 
+                        demogr_hosp_ad_dx == 16 ~ "Respiratory (including pneumonia)", 
+                        demogr_hosp_ad_dx == 17 ~ "Rheumatology/Orthopedics", 
+                        demogr_hosp_ad_dx == 18 ~ "Sepsis (severe)", 
+                        demogr_hosp_ad_dx == 19 ~ "Trauma", 
+                        demogr_hosp_ad_dx == 20 ~ "Other", 
+                        TRUE ~ "??"))
+
+admit_data <- admit_data %>% 
+  mutate(surg = ifelse(ap_surg == 1, "Non-surgical pt", NA)) %>% 
+  mutate(surg = ifelse(ap_surg == 2, "Elective surgical pt", surg)) %>% 
+  mutate(surg = ifelse(ap_surg == 3, "Emergent surgical pt", surg))
+
+    # Missings 
+    sum(is.na(admit_data[,-1]))                       # 32 missing (APICS-COVID crew)
+    
+    # Summarize 
+    count(admit_data$dx)
+    count(admit_data$surg)
+
+
+
+```
+
+# Insurance 
+```{r insurance, echo=FALSE}
+
+insur_data <- data %>% 
+  select(id, str_subset(colnames(data), "insur_"))
+
+insur_data <- insur_data %>% 
+  mutate(insur_gov = ifelse(insur_va == 1, 1, 0)) %>% 
+  mutate(insur_gov = ifelse(insur_medicaid == 1, 1, insur_gov)) %>% 
+  mutate(insur_gov = ifelse(insur_rwhiv == 1, 1, insur_gov)) %>% 
+  mutate(insur_gov = ifelse(insur_medicare == 1, 1, insur_gov)) %>% 
+  select(id, insur_priv, insur_gov, insur_workcomp, insur_none, insur_approv, insur_other)
+
+
+insur_qual <- insur_data %>% 
+  mutate(insur_priv = ifelse(insur_priv == 1, "Private", "")) %>% 
+  mutate(insur_gov = ifelse(insur_gov == 1, "Government", "")) %>% 
+  mutate(insur_workcomp = ifelse(insur_workcomp == 1, "Worker's Compensation", "")) %>% 
+  mutate(insur_none = ifelse(insur_none == 1, "None ", "")) %>% 
+  mutate(insur_approv = ifelse(insur_approv == 1, "None, awaiting approval ", "")) %>% 
+  mutate(insur_other = ifelse(insur_other == 1, "Other", "")) 
+
+insur_qual <- insur_qual %>% 
+  mutate(insurance_combined = do.call(paste, c(insur_qual[, -1], sep = " "))) 
+
+    # Missing 
+    sum(is.na(insur_data[,-1]))                       # Missing 48 from APICS-COVID crew and 1026
+    
+    # Summarize 
+    colSums(insur_data[, -1], na.rm = TRUE)
+    
+  
+
+```
+
+# FCI / CCI 
+```{r fci_cci, echo = FALSE}
+
+fc_data <- data %>% 
+  select(id, str_subset(colnames(data), "fci_cci_"))
+
+fc_data <- fc_data %>% 
+  mutate(fci_cci_depr = ifelse(fci_cci_depr == 1, "Depressed", fci_cci_depr)) %>% 
+  mutate(fci_cci_depr = ifelse(fci_cci_depr == 0, "Not depressed", fci_cci_depr)) %>% 
+  mutate(fci_cci_anx = ifelse(fci_cci_anx == 1, "Anxious", fci_cci_anx)) %>% 
+  mutate(fci_cci_anx = ifelse(fci_cci_anx == 0, "Not anxious", fci_cci_anx)) %>% 
+  mutate(fci_cci_antidep = case_when(is.na(fci_cci_antidep) ~ as.character(NA), 
+                                     fci_cci_antidep == 0 ~ "No antidepressants", 
+                                     fci_cci_antidep == 1 ~ "PRN antidepressants", 
+                                     fci_cci_antidep == 2 ~ "Routine antidepressants", 
+                                     fci_cci_antidep == 3 ~ "Both antidepressants"))
+                                     
+  
+
+    # Missings 
+    sum(is.na(fc_data$fci_cci_depr))            ## Depression - missing 8 from APICS-C 
+    sum(is.na(fc_data$fci_cci_anx))             ## Anxiety - missing 8 from APICS-C 
+    sum(is.na(fc_data$fci_cci_antidep))         ## Antidepressant use - missing 31! 
+    
+        # Huh ok so we are missing everything from the 8 APICS-C peeps
+        # Also missing a bunch of antidepressant data: total 31
+        antidep_missing <- fc_data %>% 
+          filter(is.na(fc_data$fci_cci_antidep) == TRUE) %>% 
+          select(id)
+        
+    # Counts 
+        # Depression
+        count(fc_data$fci_cci_depr)
+        # Anxiety 
+        count(fc_data$fci_cci_anx)
+        # Antidepressant use 
+        count(fc_data$fci_cci_antidep)
+
+
+        
+rm(antidep_missing)
+```
+
+# Hospital Discharge 
+```{r hosp_discharge, echo = FALSE}
+
+dc_data <- data %>% 
+  select(id, str_subset(colnames(data),"hosp_dc_"))
+
+dc_qual <- dc_data %>% 
+  mutate(hosp_dc_loc = case_when(is.na(hosp_dc_loc) ~ as.character(NA), 
+                                 hosp_dc_loc == 1 ~ "Home/Apt/Retirement/Assisted Living", 
+                                 hosp_dc_loc == 2 ~ "Acute/Subacute Rehab", 
+                                 hosp_dc_loc == 3 ~ "Long Term Acute Care Hospital", 
+                                 hosp_dc_loc == 4 ~ "Other Hospital's ICU/Ward", 
+                                 hosp_dc_loc == 5 ~ "SNF", 
+                                 hosp_dc_loc == 6 ~ "Unknown", 
+                                 hosp_dc_loc == 7 ~ "Other")) %>% 
+  mutate(hosp_dc_limit = case_when(is.na(hosp_dc_limit) ~ as.character(NA),
+                                   hosp_dc_limit == 0 ~ "No limitations on life support", 
+                                   hosp_dc_limit == 1 ~ "Yes limitations on life support", 
+                                   hosp_dc_limit == 2 ~ "Unknown")) %>% 
+  mutate(hosp_dc_covid19 = case_when(is.na(hosp_dc_covid19) ~ "No COVID test", 
+                                     hosp_dc_covid19 == 0 ~ "No COVID test", 
+                                     hosp_dc_covid19 == 1 ~ "Positive COVID test", 
+                                     hosp_dc_covid19 == 2 ~ "Negative COVID test", 
+                                     hosp_dc_covid19 == 88 ~ "Unknown"))
+
+    # Missing & Counts
+    count(dc_qual$hosp_dc_loc)
+    count(dc_qual$hosp_dc_limit)
+    count(dc_qual$hosp_dc_covid19)
+
+
+    
+```
+
+# ARDS 
+```{r ards, echo=FALSE}
+ards_data <- data %>% 
+  select(id, no_ards) 
+ards_data <- ards_data %>% 
+  mutate(no_ards = ifelse(no_ards == 0, "ARDS", no_ards)) %>% 
+  mutate(no_ards = ifelse(no_ards == 1, "No ARDS", no_ards))
+
+    # Missing 
+    sum(is.na(ards_data$no_ards))                           # 8 APICS-C missing
+    
+    # Counts (0 = ARDS, 1 = Not ARDS)
+    count(ards_data$no_ards)
+
+
+```
+
+# ADLs @ Discharge 
+```{r dc_adl, echo=FALSE}
+
+## ADLs at hospital discharge
+
+dc_adl <- data %>% 
+  select(id, adl_bath_hosp_dc, adl_dress_hosp_dc, adl_toil_hosp_dc, adl_trans_hosp_dc, adl_cntine_hosp_dc, adl_feed_hosp_dc)
+dc_adl <- dc_adl %>% 
+  mutate(dc_adl_score = rowSums(dc_adl[, -1]))
+
+    # Missing 
+    sum(is.na(dc_adl$dc_adl_score))                                    # 8 missing from APICS-C
+
+    # Degrees of independence
+    count(dc_adl$dc_adl_score)
+        # 91 completely independent
+        # 71 with any degree of dependency 
+        # 45 w half or more dependent 
+        # 4 completely dependent 
+
+    # Count of Indep vs. Dep in each activity  
+    colSums(dc_adl[, 2:7], na.rm=TRUE)
+          #                        independent         
+          #           bath     101                  
+          #           dress    106                  
+          #           toil     113                  
+          #           trans    123                  
+          #           cntine   153                    
+          #           feed     152                       
+    
+    
+
+```
+
+```{r dc_adl_graph, echo=FALSE}
+
+    # Visualize Discharge ADLs
+
+        # Independents 
+        df <- data.frame(indep = colSums(dc_adl[ , 2:7], na.rm=TRUE))
+        
+        rownames(df) <- c("Bathing", "Continence", "Dressing", "Feeding", "Toileting", "Transferring")
+        df <- df %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Independent") 
+        colnames(df) <- c("adl", "participants", "status")
+        
+        # Dependents 
+        df2 <- data.frame(dep = 180 - colSums(dc_adl[ ,2:7], na.rm=TRUE))
+        
+        rownames(df2) <- c("Bathing", "Continence", "Dressing", "Feeding", "Toileting", "Transferring")
+        df2 <- df2 %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Dependent") 
+        colnames(df2) <- c("adl", "participants", "status")
+        
+        # Merge
+        df3 <- rbind(df, df2)
+
+        
+    ggplot(df3, aes(fill = status, y = participants, x = adl)) + 
+      geom_bar(position="stack", stat="identity") + 
+      ggtitle("ADL Status at Hospital Discharge") + 
+      xlab("Activity of Daily Living") + 
+      ylab("# of Participants") + 
+      theme_bw()
+
+    
+    
+rm(df, df2, df3)
+
+```
+
+
+# Expectations for 6mo ADLs
+```{r expect_import, echo=FALSE}
+
+exp_data <- data %>% 
+  select(id, str_subset(colnames(data), "expect_"))
+
+# Transform into qualitative DF 
+    exp_qual <- exp_data 
+        for(var in c('expect_feed', 'expect_bath', 'expect_groom', 'expect_dress', 
+                     'expect_toil', 'expect_transf', 'expect_housekeep', 'expect_transport', 
+                     'expect_fin', 'expect_foodprep', 'expect_shop', 'expect_meds', 'expect_phone')) {
+          exp_qual <- exp_qual %>% 
+           dplyr::mutate(!!var := case_when(get(var) == 0 ~ "No", 
+                                         get(var) == 1 ~ "Yes", 
+                                         get(var) == 2 ~ "Unsure"))
+        }
+    
+    
+# Add Y/N/Unsure tally columnss 
+    exp_qual <- exp_qual %>% 
+      mutate(exp_yes = rowSums(exp_qual == "Yes")) %>% 
+      mutate(exp_no = rowSums(exp_qual == "No")) %>% 
+      mutate(exp_unsure = rowSums(exp_qual == "Unsure")) 
+
+    # Missing ---> none missing! 
+    colSums(is.na(exp_data[, -1]))
+    
+    # Counts
+    #count(exp_qual$exp_yes)
+
+    # Visualize 
+    hist(exp_qual$exp_yes, 
+         main = "Histogram of # ADLs expected to do independently", 
+         xlab = "# ADLs (0-13)", 
+         xlim = c(0,13), 
+         breaks = 13)
+  
+    
+    
+
+rm(var)
+
+```
+
+# Importance of independent 6mo ADLs
+```{r importance, echo=FALSE}
+
+imp_data <- data %>% 
+  select(id, str_subset(colnames(data), "import_")) 
+
+imp_data <- imp_data %>% 
+  mutate(imp_score = rowSums(imp_data[,-1]))
+
+    imp_qual <- imp_data 
+        for(var in c("import_feed", "import_bath", "import_groom", "import_dress", 
+                     "import_toil", "import_transf", "import_housekeep", "import_transport", 
+                     "import_fin", "import_foodprep", "import_shop", "import_meds", "import_phone")) {
+          imp_qual <- imp_qual %>% 
+           dplyr::mutate(!!var := case_when(get(var) == 0 ~ "Not important", 
+                                         get(var) == 1 ~ "Slightly important", 
+                                         get(var) == 2 ~ "Moderately important", 
+                                         get(var) == 3 ~ "Important",
+                                         get(var) == 4 ~ "Very important"))
+        }
+
+    # Missing 
+    sum(is.na(imp_data$imp_score))                                    # 0 missing 
+    
+
+rm(var)
+```
+
+```{r imp_graph, echo=FALSE}
+
+# activity = X (rows)
+# importance = fill 
+# frequency = Y 
+
+df <- imp_data %>% 
+  select(-id, -imp_score) 
+
+# Not important (0-2) 
+    df_notimp <- df 
+        for(var in c("import_feed", "import_bath", "import_groom", "import_dress", 
+                         "import_toil", "import_transf", "import_housekeep", "import_transport", 
+                         "import_fin", "import_foodprep", "import_shop", "import_meds", "import_phone")) {
+          df_notimp <- df_notimp %>% 
+            dplyr::mutate(!!var := case_when(get(var) == 0 ~ 1, 
+                                             get(var) == 1 ~ 1, 
+                                             get(var) == 2 ~ 1, 
+                                             TRUE ~ 0))
+                         }
+
+    df1 <- data.frame(not_imp = colSums(df_notimp))
+        rownames(df1) <- c("Feed", "Bathe", "Groom", "Dress", "Toilet", 
+                           "Transfer", "Housekeep", "Transport", "Finance", 
+                           "Cook", "Shop", "Meds", "Phone")
+        df1 <- df1 %>% 
+          rownames_to_column() %>% 
+          mutate(status = "Low Importance") 
+        colnames(df1) <- c("iadl", "frequency", "status")
+    
+
+# Neutral (2)
+#    df_neut <- df 
+#        for(var in c("import_feed", "import_bath", "import_groom", "import_dress", 
+#                         "import_toil", "import_transf", "import_housekeep", "import_transport", 
+#                         "import_fin", "import_foodprep", "import_shop", "import_meds", "import_phone")) {
+#          df_neut <- df_neut %>% 
+#            dplyr::mutate(!!var := case_when(get(var) == 2 ~ 1, 
+#                                             TRUE ~ 0))
+#                         }
+#    
+#    df3 <- data.frame(neut_imp = colSums(df_neut))
+#        rownames(df3) <- c("Feed", "Bathe", "Groom", "Dress", "Toilet", 
+#                           "Transfer", "Housekeep", "Transport", "Finance", 
+#                           "Cook", "Shop", "Meds", "Phone")
+#        df3 <- df3 %>% 
+#          rownames_to_column() %>% 
+#          mutate(status = "Mid Importance") 
+#        colnames(df3) <- c("iadl", "frequency", "status")
+    
+# Important (3-4)
+    df_imp <- df 
+      for(var in c("import_feed", "import_bath", "import_groom", "import_dress", 
+                         "import_toil", "import_transf", "import_housekeep", "import_transport", 
+                         "import_fin", "import_foodprep", "import_shop", "import_meds", "import_phone")) {
+          df_imp <- df_imp %>% 
+            dplyr::mutate(!!var := case_when(get(var) == 3 ~ 1, 
+                                             get(var) == 4 ~ 1, 
+                                             TRUE ~ 0))
+                        }
+    
+    df2 <- data.frame(imp = colSums(df_imp))
+    
+        rownames(df2) <- c("Feed", "Bathe", "Groom", "Dress", "Toilet", 
+                           "Transfer", "Housekeep", "Transport", "Finance", 
+                           "Cook", "Shop", "Meds", "Phone")
+        df2 <- df2 %>% 
+          rownames_to_column() %>% 
+          mutate(status = "High importance") 
+        colnames(df2) <- c("iadl", "frequency", "status")
+
+# Combine + plot 
+    df <- rbind(df1, df2)
+
+    ggplot(df, aes(fill=status, y=frequency, x=iadl)) + 
+      geom_bar(position="dodge", stat="identity") + 
+      theme_bw()
+
+
+rm(var, df_imp, df_notimp, df1, df2, df)
+# rm(df_neut, df3)
+```
+
+# Connor-Davidson Resilience 
+```{r resilience, echo=FALSE}
+
+cd_data <- data %>% 
+  select(id, str_subset(colnames(data), "cd_"))
+
+cd_data <- cd_data %>% 
+  mutate(cd_score = rowSums(cd_data[, -1])) %>% 
+  select(id, cd_score)
+
+    # Missing 
+    colSums(is.na(cd_data))
+    
+    # Summarize 
+    summary(cd_data$cd_score)
+    
+    # Visualize 
+    hist(cd_data$cd_score, 
+         main = "Histogram of Connor-Davidson Resilience Scores", 
+         xlab = "Score (0-40)", 
+         xlim = c(0,40))
+
+
+```
+
+
+
+
+
