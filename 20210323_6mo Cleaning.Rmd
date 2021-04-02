@@ -1,0 +1,71 @@
+---
+title: "6mo Cleaning"
+author: "Emma Lee"
+date: "3/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+# Read in the data 
+```{r read_in, echo=FALSE, include=FALSE}
+
+data <- read_csv(here::here("Data", "20210323_APICS01 OSEAR 6mo Data.csv"))
+codebook <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Codebook.csv"))
+
+
+```
+# Vital Status 
+```{r vital_status, echo=FALSE}
+
+# Vital status for excluding pts who did not complete the study from Table 1 
+
+vs_df <- read_csv(here::here("Data", "20210323_APICS01 OSEAR Vital Status Data.csv"))
+vs_codebook <- read_csv(here::here("Data", "20210323_APICS01 OSEAR Vital Status Codebook.csv"))
+colnames(vs_df) <- colnames(vs_codebook)
+
+mort_df <- vs_df %>% 
+  filter(mort == 0)
+
+unk_df <- vs_df %>% 
+  filter(mort == 2)
+
+mort_ids <- pull(mort_df, id)
+
+
+rm(vs_df, vs_codebook)
+```
+
+
+```{r , include=FALSE}
+
+
+```
+
+
+```{r , include=FALSE}
+
+
+```
+
+
+```{r , include=FALSE}
+
+
+```
+
+
+```{r , include=FALSE}
+
+
+```
