@@ -30,7 +30,7 @@ library(ggplot2)
 ## Read in the Baseline data
 ```{r read_bsln, include=FALSE}
 
-bsln_data <- read_csv(here::here("Data", "20210311_OSEAR APICS01 Bsln.csv"))
+bsln_data <- read_csv(here::here("Data", "20210331_OSEAR Baseline Data.csv"))
 
 # Pull EQ VAS column
     vars <- c("id", "osear_1")
@@ -51,7 +51,7 @@ rm(bsln_data)
 ## Read in the 6mo follow up data 
 ```{r read_6mo, include=FALSE}
 
-f_up_data <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Data.csv"))
+f_up_data <- read_csv(here::here("Data", "20210402_APICS01 OSEAR 6mo Data.csv"))
 
 # Pull EQ VAS column 
     vars2 <- c("p1_subid", "p6_eqol_health")
@@ -64,7 +64,6 @@ f_up_data <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Data.csv"))
     
 # Clean up
 rm(vars2)
-rm(f_up_data)
 ```
 
 ## Check for duplicates and merge datasets 
@@ -78,7 +77,7 @@ rm(f_up_data)
     bsln_list <- as.data.frame(unique(eqvas_bsln$id))
     colnames(bsln_list) <- "id"
 
-    setdiff(pt_list, bsln_list)                                 # Missing those 3 IMC pts 2011, 2014, 2015
+    setdiff(pt_list, bsln_list)                                 # no missings
     
 # BSLN Duplicated
     eqvas_bsln <- distinct(eqvas_bsln)
@@ -92,31 +91,45 @@ rm(f_up_data)
     fup_list <- as.data.frame(unique(eqvas_6mo$id))
     colnames(fup_list) <- "id"
     
-    setdiff(pt_list, fup_list)
+    setdiff(pt_list, fup_list)                                  # Oof. 1 BIDMC, 1 IMC, 1 Vanderbilt, 12 JHH APICS01 / OSEAR Only, 8 JHH APICS-C. Total missing 23
+    
+    # Let's look into where we lost 6mo pts  
+        test <- f_up_data %>% 
+          select(p1_subid, 
+                 str_subset(colnames(f_up_data), "eqol_"), 
+                 str_subset(colnames(f_up_data), "adl"))              # 157 pts with Access data entries 
+        
+        test2 <- test %>% 
+          filter(p4_eqol_notdone == 1)                                            # 142 pts with EQOL marked "done" 
+        
+        test3 <- test2 %>% 
+          filter(!is.na(p6_eqol_health))                                          # 129 pts with completed EQ-VAS 
+        
+        test4 <- test %>% 
+          filter(is.na(p6_eqol_health))                                           # HUH. Note that several pts with no EQ-VAS data have I/ADL data 
     
 # 6MO Duplicates
     
-    eqvas_6mo <- distinct(eqvas_6mo)                             # Yasss no duplicates again
+    eqvas_6mo <- distinct(eqvas_6mo)                            # Yasss no duplicates again
 
 
-eqvas_data <- eqvas_bsln %>% 
-  left_join(eqvas_6mo)
 
 
-rm(pt_list)
-rm(bsln_list)
-rm(bsln_dup)
-rm(fup_list)
 
+rm(pt_list, bsln_list, bsln_dup, fup_list, f_up_data)
+rm(test, test2, test3, test4)
 ```
 
-## Summary of data
+## Merge & Summarize data
 ```{r summary}
+# Merge 
+    eqvas_data <- eqvas_bsln %>% 
+      left_join(eqvas_6mo)
 
 # Counts 
-    sum(!is.na(eqvas_data$eqvas_dc))        # 177 baseline 
-    sum(!is.na(eqvas_data$eqvas_6mo))       # 125 complete @ 6mo
-    sum(is.na(eqvas_data$eqvas_6mo))        # 52 missing @ 6mo
+    sum(!is.na(eqvas_data$eqvas_dc))        # 180 baseline 
+    sum(!is.na(eqvas_data$eqvas_6mo))       # 129 complete @ 6mo
+    sum(is.na(eqvas_data$eqvas_6mo))        # 51 missing @ 6mo
 
 # Baseline summary stats 
 
@@ -168,7 +181,6 @@ rm(fup_list)
       select(id, diff, change_label) %>% 
       filter(!is.na(diff))
 
-
 ```
 
 
@@ -177,19 +189,19 @@ rm(fup_list)
 
 # Counts of changes
     
-    sum(!is.na(change_data$diff))                # 125 complete @ 6mo
-    nrow(change_data[change_data$diff > 0,])     # 27 perceived > expected 
-    nrow(change_data[change_data$diff == 0,])    # 25 perceived = expected
-    nrow(change_data[change_data$diff < 0,])     # 75 perceived < expected
+    sum(!is.na(change_data$diff))                 # 129 complete @ 6mo
+    nrow(change_data[change_data$diff > 0,])      # 26 perceived > expected 
+    nrow(change_data[change_data$diff == 0,])     # 26 perceived = expected
+    nrow(change_data[change_data$diff < 0,])      # 77 perceived < expected
     
-    nrow(change_data[change_data$diff > 8, ])    # 16 perceived > expected by more than 8 points 
-    nrow(change_data[change_data$diff < -8,])    # 64 perceived < expected by more than 8 points 
+    nrow(change_data[change_data$diff >= 8, ])    # 16 perceived > expected by 8 points or more
+    nrow(change_data[change_data$diff <= -8,])    # 67 perceived < expected by 8 points or more
     
-    nrow(change_data[change_data$diff > 10, ])   # 11 perceived > expected by more than 10 points 
-    nrow(change_data[change_data$diff < -10,])   # 51 perceived < expected by more than 10 points
+    nrow(change_data[change_data$diff >= 10, ])   # 16 perceived > expected by 10 points or more
+    nrow(change_data[change_data$diff <= -10,])   # 66 perceived < expected by 10 points or more
     
-    nrow(change_data[change_data$diff > 20, ])   #  2 perceived > expected by more than 20 points 
-    nrow(change_data[change_data$diff < -20,])   # 24 perceived < expected by more than 20 points
+    nrow(change_data[change_data$diff >= 20, ])   #  6 perceived > expected by 20 points or more
+    nrow(change_data[change_data$diff <= -20,])   # 40 perceived < expected by 20 points or more
 
     
     hist(change_data$diff, 
@@ -228,22 +240,10 @@ rm(fup_list)
     
     # Select complete cases 
     data <- data[complete.cases(data), ]
-    
 
-# Base R version of the spaghetti plot 
-#    interaction.plot(x.factor = data$timepoint, 
-#                     trace.factor = data$id, 
-#                     response = data$value, 
-#                     ylab = "% of Full Health",
-#                     xlab = "Timepoint",
-#                     lty = 1, 
-#                     lwd = 1, 
-#                     legend = FALSE
-#                     ) 
-    # meh
 
     
-# Trying out ggplot2 version 
+# ggplot spaghetti plot
     
     #data2 <- filter(data, !is.na(data$eqvas_6mo))
 

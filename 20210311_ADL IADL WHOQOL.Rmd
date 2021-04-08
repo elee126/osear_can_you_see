@@ -26,13 +26,13 @@ library(janitor)
 ```{r read-in, include=FALSE}
 
 # Baseline Data 
-    bsln_data <- read_csv(here::here("Data", "20210305_OSEAR Baseline Data.csv"))
-    bsln_codebook <- read_csv(here::here("Data", "20210306_OSEAR Baseline Codebook.csv"))
+    bsln_data <- read_csv(here::here("Data", "Archived data versions", "20210305_OSEAR Baseline Data.csv"))
+    bsln_codebook <- read_csv(here::here("Data", "Archived data versions", "20210306_OSEAR Baseline Codebook.csv"))
     colnames(bsln_data) <- colnames(bsln_codebook)
 
 # 6 month data 
-    fup_data <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Data.csv"))
-    fup_codebook <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Codebook.csv"))
+    fup_data <- read_csv(here::here("Data", "Archived data versions", "20210311_APICS01 OSEAR 6mo Data.csv"))
+    fup_codebook <- read_csv(here::here("Data", "20210402_APICS01 OSEAR 6mo Codebook.csv"))
     colnames(fup_data) <- colnames(fup_codebook)
 
 
@@ -154,6 +154,8 @@ expectations_met <- list(pt_list, indep, met, met_exceed) %>% reduce(left_join, 
 
 
 rm(data, expectations, outcome, met, indep, met_exceed)
+
+
 ```
 
 # WHOQOL-BREF subset 
@@ -226,47 +228,7 @@ write_csv(export, "20210315_ADL IADL WHOQ Prelim Export.csv")
 ```
 
 
-# Look at WHOQOL data
-```{r whoq_summaries, echo = FALSE}
 
-## D1: Physical Health 
-summary(whoq_data$d1_score)
-hist(whoq_data$d1_score, 
-     main = "WHOQOL-BREF D1: Physical Health", 
-     xlab = "Score (4-20)", 
-     xlim = c(4, 20), 
-     ylim = c(0, 50), 
-     breaks = 8)
-
-## D2: Psychological Health 
-summary(whoq_data$d2_score)
-hist(whoq_data$d2_score, 
-     main = "WHOQOL-BREF D2: Psychological Health", 
-     xlab = "Score (4-20)", 
-     xlim = c(4, 20), 
-     ylim = c(0, 50), 
-     breaks = 5)
-
-## D3: Social Relationships 
-summary(whoq_data$d3_score)
-hist(whoq_data$d3_score, 
-     main = "WHOQOL-BREF D3: Social Relationships", 
-     xlab = "Score (4-20)", 
-     xlim = c(4, 20), 
-     ylim = c(0, 50), 
-     breaks = 8)
-
-## D4: Environment
-summary(whoq_data$d4_score)
-hist(whoq_data$d4_score, 
-     main = "WHOQOL-BREF D4: Environment", 
-     xlab = "Score (4-20)", 
-     xlim = c(4, 20), 
-     ylim = c(0, 50), 
-     breaks = 8)
-
-
-```
 
 
 

@@ -33,8 +33,10 @@ colnames(data) <- colnames(codebook)
 rm(codebook)
 ```
 
-# HUS 
+## HUS 
 ```{r hus, results="hide"}
+
+# Data collected from EMR, stored in REDCap > APICS-Data Collection Forms > Form 1: "Prior HUS"
 
 hus_data <- data %>% 
   select(id, hus_rehab, hus_nursing)
@@ -53,10 +55,11 @@ hus_data <- data %>%
 
 ```
 
-# Baseline ADLs
+## Baseline ADLs
 ```{r bsln_adl, results="hide"}
 
 ## ADLs 
+# Data collected upon recruitment > Baseline CRF > REDCap > APICS-Data Collection Forms > Form 1: "ADL"
 
 bsln_adl <- data %>% 
   select(id, adl_bath, adl_dress, adl_toil, adl_trans, adl_cntine, adl_feed)
@@ -127,10 +130,11 @@ rm(df, df2, df3)
 ```
 
 
-# Baseline IADLs
+## Baseline IADLs
 ```{r bsln_iadl, results="hide"}
 
 ## IADLs 
+# Data collected on recruitment > Baseline CRF > REDCap > APICS-Data Collection Forms > Form 1: "IADL"
     
 bsln_iadl <- data %>% 
   select(id, str_subset(colnames(data), "iadl_"), -iadl_pt, -iadl_proxy)
@@ -203,8 +207,11 @@ rm(var, df, df2, df3)
 
 ```
 
-# Clinical Frailty Scale 
+## Clinical Frailty Scale 
 ```{r cfs, echo=FALSE}
+
+# Data collected on recruitment > Baseline CRF > REDCap > APICS-Data Collection Forms > Form 1: "CFS"
+
 cfs_data <- data %>% 
   select(id, cfs, demogr_sex, demogr_age)
 
@@ -268,8 +275,10 @@ cfs_data <- data %>%
 ```
 
 
-# MSPSS  
+## MSPSS  
 ```{r mspss, echo = FALSE}
+
+# Data collected on recruitment > Baseline CRF > REDCap ? APICS-Data Collection Forms > Form 1: "MSPSS"
 
 mspss_data <- data %>% 
   select(id, str_subset(colnames(data), "mspss"))
@@ -321,8 +330,10 @@ mspss_data <- mspss_data %>%
 ```
 
 
-# Demographics
+## Demographics
 ```{r demographics, echo=FALSE}
+
+# Data collected from EMR > REDCap > APICS-Data Collection Forms > Form 2: "Demographics"
 
 dem_data <- data %>% 
   select(id, str_subset(colnames(data), "demogr_"), -demogr_hosp_ad_dx) 
@@ -359,8 +370,11 @@ dem_data <- dem_data %>%
 
 ```
 
-# Admission Dx & Sx Status
+## Admission Dx & Sx Status
 ```{r hosp_admit, echo=FALSE}
+
+# Diagnosis data collected from EMR > REDCap > APICS-Data Collection Forms > Form 2: "Demographics"
+# Surgical status data collected from EMR > REDCap > APICS-Data Collection Forms > Form 2: "APACHE II"
 
 admit_data <- data %>% 
   select(id, demogr_hosp_ad_dx, ap_surg)
@@ -405,8 +419,10 @@ admit_data <- admit_data %>%
 
 ```
 
-# Insurance 
+## Insurance 
 ```{r insurance, echo=FALSE}
+
+# Data collected from EMR > REDCap > APICS-Data Collection Forms > Form 2: "Demographics"
 
 insur_data <- data %>% 
   select(id, str_subset(colnames(data), "insur_"))
@@ -436,12 +452,29 @@ insur_qual <- insur_qual %>%
     # Summarize 
     colSums(insur_data[, -1], na.rm = TRUE)
     
+    
+# "Other" insurances: manually reclassified below: 
+    # 3011 - TRICARE -------------------------> Gov
+    # 3032 - CIGNA ---------------------------> Priv
+    # 3033 - Amerigroup Maryland -------------> Gov
+    # 3066 - EHP -----------------------------> Priv
+    # 3097 - HRSA COVID 19 Uninsured Fund ----> Gov
+    
+insur_data2 <- insur_data %>% 
+  mutate(insur_gov = ifelse(id == 3011, 1, insur_gov)) %>% 
+  mutate(insur_gov = ifelse(id == 3033, 1, insur_gov)) %>% 
+  mutate(insur_gov = ifelse(id == 3097, 1, insur_gov)) %>% 
+  mutate(insur_priv = ifelse(id == 3032, 1, insur_priv)) %>% 
+  mutate(insur_priv = ifelse(id == 3066, 1, insur_priv)) %>% 
+  select(-insur_other)
   
 
 ```
 
-# FCI / CCI 
+## FCI / CCI 
 ```{r fci_cci, echo = FALSE}
+
+# Data collected from EMR > REDCap > APICS-Data Collection Forms > Form 2: "FCI & CCI"
 
 fc_data <- data %>% 
   select(id, str_subset(colnames(data), "fci_cci_"))
@@ -486,6 +519,8 @@ rm(antidep_missing)
 # Hospital Discharge 
 ```{r hosp_discharge, echo = FALSE}
 
+# Data collected from EMR > REDCap > APICS-Data Collection Forms > Form 6: "Hospital Discharge"
+
 dc_data <- data %>% 
   select(id, str_subset(colnames(data),"hosp_dc_"))
 
@@ -513,12 +548,22 @@ dc_qual <- dc_data %>%
     count(dc_qual$hosp_dc_limit)
     count(dc_qual$hosp_dc_covid19)
 
-
+    # Investigating hospital d/c limitations on life support --> looking in EPIC 
+        # Unknowns 
+        # Yes limitations: 
+        #     3070 = DNR, DNI 
+        #     3072 = Full code
+        #     3120 = Full code 
     
+  
+  
 ```
 
 # ARDS 
 ```{r ards, echo=FALSE}
+
+# Data collected from EMR > REDCap > APICS-Data Collection Forms > Form 4: "ARDS Screening"
+
 ards_data <- data %>% 
   select(id, no_ards) 
 ards_data <- ards_data %>% 
@@ -536,6 +581,8 @@ ards_data <- ards_data %>%
 
 # ADLs @ Discharge 
 ```{r dc_adl, echo=FALSE}
+
+# Data collected from EMR > REDCap > APICS-Data Collection Forms > Form 6: "ADL at Hospital Discharge"
 
 ## ADLs at hospital discharge
 
@@ -611,6 +658,8 @@ rm(df, df2, df3)
 # Expectations for 6mo ADLs
 ```{r expect_import, echo=FALSE}
 
+# Data collected from on recruitment > Baseline CRF > REDCap > APICS-Data Collection Forms > OSEAR: "OSEAR"
+
 exp_data <- data %>% 
   select(id, str_subset(colnames(data), "expect_"))
 
@@ -654,6 +703,8 @@ rm(var)
 
 # Importance of independent 6mo ADLs
 ```{r importance, echo=FALSE}
+
+# Data collected from on recruitment > Baseline CRF > REDCap > APICS-Data Collection Forms > OSEAR: "OSEAR"
 
 imp_data <- data %>% 
   select(id, str_subset(colnames(data), "import_")) 
@@ -765,6 +816,8 @@ rm(var, df_imp, df_notimp, df1, df2, df)
 
 # Connor-Davidson Resilience 
 ```{r resilience, echo=FALSE}
+
+# Data collected from on recruitment > Baseline CRF > REDCap > APICS-Data Collection Forms > OSEAR: "OSEAR"
 
 cd_data <- data %>% 
   select(id, str_subset(colnames(data), "cd_"))

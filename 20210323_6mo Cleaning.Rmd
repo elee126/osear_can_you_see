@@ -1,5 +1,5 @@
 ---
-title: "6mo Cleaning"
+title: "6mo Cleaning & FCMs"
 author: "Emma Lee"
 date: "3/23/2021"
 output: html_document
@@ -20,52 +20,289 @@ library(janitor)
 # Read in the data 
 ```{r read_in, echo=FALSE, include=FALSE}
 
-data <- read_csv(here::here("Data", "20210323_APICS01 OSEAR 6mo Data.csv"))
-codebook <- read_csv(here::here("Data", "20210311_APICS01 OSEAR 6mo Codebook.csv"))
+data <- read_csv(here::here("Data", "20210402_APICS01 OSEAR 6mo Data.csv"))
+codebook <- read_csv(here::here("Data", "20210402_APICS01 OSEAR 6mo Codebook.csv"))
+
+colnames(data) <- colnames(codebook)
 
 
 ```
+
 # Vital Status 
 ```{r vital_status, echo=FALSE}
 
 # Vital status for excluding pts who did not complete the study from Table 1 
 
-vs_df <- read_csv(here::here("Data", "20210323_APICS01 OSEAR Vital Status Data.csv"))
+vs_df <- read_csv(here::here("Data", "20210402_APICS01 OSEAR Vital Status Data.csv"))
 vs_codebook <- read_csv(here::here("Data", "20210323_APICS01 OSEAR Vital Status Codebook.csv"))
 colnames(vs_df) <- colnames(vs_codebook)
 
-mort_df <- vs_df %>% 
-  filter(mort == 0)
+lost_df <- vs_df %>% 
+  filter(mort == 0 | mort == 2) %>% 
+  select(-contact) %>% 
+  distinct()
 
-unk_df <- vs_df %>% 
-  filter(mort == 2)
+lost_ids <- pull(lost_df, id)
 
-mort_ids <- pull(mort_df, id)
-
+length(lost_ids)                            # 15 died 
 
 rm(vs_df, vs_codebook)
 ```
 
+# Completion by WHOQ
+```{r completion, echo=FALSE, include=FALSE}
 
+whoq_df <- data %>% 
+  select(id, str_subset(colnames(data), "whoq_"), -whoq_date, -whoq_id) 
+
+# Toggle thresholds for "Not done" and "Incomplete"
+    whoq_df <- whoq_df %>% 
+      mutate(missing_count = rowSums(is.na(whoq_df[, 3:28]))) %>% 
+      mutate(whoq_done = ifelse(complete.cases(whoq_df[, 3:28]), "Done", NA)) %>%
+      mutate(whoq_done = ifelse(missing_count >1, "Not done", whoq_done)) %>% 
+      mutate(whoq_done = ifelse(missing_count == 1, "Incomplete", whoq_done))
+    
+# Count incompletes 
+    # Overall 
+    count(whoq_df$whoq_done)
+    
+    # BIDMC 
+    df <- whoq_df[whoq_df$id < 2000,]
+    count(df$whoq_done)
+    
+    # IMC 
+    df <- whoq_df[whoq_df$id >= 2000 & whoq_df$id < 3000,]
+    count(df$whoq_done)
+    
+    # JHH 
+    df <- whoq_df[whoq_df$id >= 3000 & whoq_df$id < 4000,]
+    count(df$whoq_done)
+    
+    # VUMC
+    df <- whoq_df[whoq_df$id >= 5000,]
+    count(df$whoq_done)
+    
+    
+# Compare whoq not done ID list to vital status list 
+    whoq_lost <- whoq_df %>% 
+      filter(whoq_done == "Not done")
+    whoq_lost <- pull(whoq_lost, id)
+      
+    setdiff(lost_ids, whoq_lost) # 1014 3011 3053 3102 3112 5019 (6) are dead/unknwn per VS, missing from whoq_lost 
+    
+    setdiff(whoq_lost, lost_ids) # 1020 2023 2024 3020 3028 3032 3044 3049 3076 3095 5007 5014 (12) be lost per whoq, alive per VS
+
+
+# Investigate ppl missing single data point 
+    df <- whoq_df %>% 
+      filter(missing_count == 1)
+    
+# 6mo completed id list 
+    pt_list_6mo <- whoq_df %>% 
+      filter(whoq_done == "Done") %>% 
+      select(id)
+    
+rm(df, whoq_lost)
+```
+
+
+# WHOQOL-BREF Scoring
+```{r whoq_scoring, include=FALSE}
+# Scoring 
+    whoq_score <- whoq_df %>% 
+      select(-missing_count, -whoq_done) 
+    
+    colnames(whoq_score) <- c("id", "qol", "satisf", "pain", "med", "enjoy", "mean", "concent", "safe", "phys", "energ", "appear", "mon", "avail", "leis", "around", "sleep", "adl", "work", "self", "relat", "sex", "frenz", "livplace", "health", "transport", "blues")
+
+    # Flip reverse-coded questions 
+    for(var in c('pain', 'med', 'blues')) {
+      whoq_score <- whoq_score %>% 
+       dplyr::mutate(!!var := case_when(get(var) == 1 ~ 5, 
+                                     get(var) == 2 ~ 4, 
+                                     get(var) == 3 ~ 3, 
+                                     get(var) == 4 ~ 2, 
+                                     get(var) == 5 ~ 1))
+    }
+   
+    # Domain raw scores: D1 physical health, D2 psychological health, D3 social relationships, D4 environment
+    #     D1 (6 Qs) = 3 pain, 4 med, 10 energ, 15 around, 16 sleep, 17 adl, 18 work
+    #     D2 (5 Qs) = 5 enjoy, 6 mean, 7 concent, 11 appear, 19 self, 26 blues
+    #     D3 (2 Qs) = 20 relat, 21 sex , 22 frenz
+    #     D4 (6 Qs) = 8 safe, 9 phys, 12 mon, 13 avail, 14 leis, 23 livplace, 24 health, 25 transport
+    
+    whoq_score <- whoq_score %>% 
+      dplyr::mutate(d1_score = 4*rowMeans(whoq_score[, c('pain', 'med', 'energ', 'around', 'sleep', 'adl', 'work')], na.rm = TRUE)) %>% 
+      dplyr::mutate(d2_score = 4*rowMeans(whoq_score[, c('enjoy', 'mean', 'concent', 'appear', 'self', 'blues')], na.rm = TRUE)) %>% 
+      dplyr::mutate(d3_score = 4*rowMeans(whoq_score[, c('relat', 'sex', 'frenz')], na.rm = TRUE)) %>% 
+      dplyr::mutate(d4_score = 4*rowMeans(whoq_score[, c('safe', 'phys', 'mon', 'avail', 'leis', 'livplace', 'health', 'transport')], na.rm = TRUE))
+    
+    # Round off those decimals 
+    whoq_score <- whoq_score %>% 
+      round(digits=1) %>% 
+      select(id, d1_score, d2_score, d3_score, d4_score)
+
+```
+
+```{r whoq_summary, echo = FALSE}
+
+## D1: Physical Health 
+summary(whoq_score$d1_score)
+hist(whoq_score$d1_score, 
+     main = "WHOQOL-BREF D1: Physical Health", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 8)
+
+## D2: Psychological Health 
+summary(whoq_score$d2_score)
+hist(whoq_score$d2_score, 
+     main = "WHOQOL-BREF D2: Psychological Health", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 5)
+
+## D3: Social Relationships 
+summary(whoq_score$d3_score)
+hist(whoq_score$d3_score, 
+     main = "WHOQOL-BREF D3: Social Relationships", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 8)
+
+## D4: Environment
+summary(whoq_score$d4_score)
+hist(whoq_score$d4_score, 
+     main = "WHOQOL-BREF D4: Environment", 
+     xlab = "Score (4-20)", 
+     xlim = c(4, 20), 
+     ylim = c(0, 50), 
+     breaks = 8)
+
+
+```
+
+# EQ-5D-5L
+```{r eq5d, include=FALSE}
+eq5d_df <- data %>% 
+  select(id, str_subset(colnames(data), "eq_"))
+
+eq5d_df <- eq5d_df %>% 
+  mutate(eq_score = ifelse(complete.cases(eq5d_df), do.call(paste0, c(eq5d_df[, 4:8], sep="")), NA))
+
+    # Missings 
+    colSums(is.na(eq5d_df[, 9]))                  # Missing 27 folks 
+    
+    # Look at it
+    hist(eq5d_df$eq_mobil, 
+         main = "Hist of EQ5D Mobility",
+         xlab = "Score (1-5)", 
+         xlim = c(1,6), 
+         breaks = 5)
+    
+    hist(eq5d_df$eq_selfcare, 
+         main = "Hist of EQ5D Self Care", 
+         xlab = "Score (1-5)", 
+         xlim = c(1,6), 
+         breaks = 5) 
+    
+    hist(eq5d_df$eq_activ, 
+         main = "Hist of EQ5D Usual Activity", 
+         xlab = "Score (1-5)", 
+         xlim = c(1,6), 
+         breaks = 5) 
+    
+    hist(eq5d_df$eq_pain, 
+         main = "Hist of EQ5D Pain/Discomfort", 
+         xlab = "Score (1-5)", 
+         xlim = c(1,6), 
+         breaks = 5) 
+    
+    hist(eq5d_df$eq_anxdep, 
+         main = "Hist of EQ5D Anxiety/Depression", 
+         xlab = "Score (1-5)", 
+         xlim = c(1,6), 
+         breaks = 5) 
+
+
+```
+
+# EQVAS @ 6mo 
+```{r eqvas, include=FALSE}
+
+eqvas_df <- data %>% 
+  select(id, eqvas)
+
+    # Missing
+    colSums(is.na(eqvas_df[,2]))                      # Missing 28 
+    
+    # Hist
+    hist(eqvas_df$eqvas, 
+         main = "Hist of EQVAS at 6mo", 
+         xlab = "Score (0-100%)", 
+         xlim = c(0,100), 
+         breaks = 20)
+
+```
+
+# ADL @ 6mo
+```{r adl6, include=FALSE}
+
+adl_df <- data %>% 
+  select(id, str_subset(colnames(data), "adl6_"), -str_subset(colnames(data), "iadl6_"))
+
+    # Missing 
+    sum(is.na(adl_df[,2]))                # 1 NA
+    table(adl_df$adl6_done)               # 14 not done, 142 done 
+
+    # Count & Perc by activity
+    tabyl(adl_df$adl6_bath)
+    tabyl(adl_df$adl6_dress)
+    tabyl(adl_df$adl6_toil) 
+    tabyl(adl_df$adl6_transf) 
+    tabyl(adl_df$adl6_contin) 
+    tabyl(adl_df$adl6_feed)
+
+```
+
+# IADL @ 6mo
+```{r iadl6, include=FALSE}
+
+iadl_df <- data %>% 
+  select(id, str_subset(colnames(data), "iadl6_"))
+
+    # Missing 
+    sum(is.na(iadl_df[,2]))                 # 1 NA
+    table(iadl_df$iadl6_done)               # 14 not done, 142 done 
+    
+    # Count & Perc by activity 
+    tabyl(iadl_df$iadl6_phone)
+    tabyl(iadl_df$iadl6_shop)
+    tabyl(iadl_df$iadl6_foodprep)
+    tabyl(iadl_df$iadl6_housekeep)
+    tabyl(iadl_df$iadl6_laundry)
+    tabyl(iadl_df$iadl6_transport)
+    tabyl(iadl_df$iadl6_meds)
+    tabyl(iadl_df$iadl6_fin)
+
+
+```
+
+# Return to work 
 ```{r , include=FALSE}
 
 
 ```
 
-
-```{r , include=FALSE}
-
-
-```
-
-
-```{r , include=FALSE}
+# MSPSS @ 6mo 
+```{r mspss, include=FALSE}
 
 
 ```
 
 
-```{r , include=FALSE}
 
 
-```
+
