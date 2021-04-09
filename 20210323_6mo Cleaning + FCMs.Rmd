@@ -18,18 +18,18 @@ library(janitor)
 ```
 
 # Read in the data 
-```{r read_in, echo=FALSE, include=FALSE}
+```{r read_in, include=FALSE}
 
 data <- read_csv(here::here("Data", "20210402_APICS01 OSEAR 6mo Data.csv"))
 codebook <- read_csv(here::here("Data", "20210402_APICS01 OSEAR 6mo Codebook.csv"))
 
 colnames(data) <- colnames(codebook)
 
-
+rm(codebook)
 ```
 
-# Vital Status 
-```{r vital_status, echo=FALSE}
+# Completion by Vital Status --> 15 pts died or unknown vital status
+```{r vital_status, include=FALSE}
 
 # Vital status for excluding pts who did not complete the study from Table 1 
 
@@ -44,12 +44,13 @@ lost_df <- vs_df %>%
 
 lost_ids <- pull(lost_df, id)
 
-length(lost_ids)                            # 15 died 
+length(lost_ids)                            # 15 died or unknown vital status
+
 
 rm(vs_df, vs_codebook)
 ```
 
-# Completion by WHOQ
+# Completion by WHOQ --> 22 not done, 5 incomplete 
 ```{r completion, echo=FALSE, include=FALSE}
 
 whoq_df <- data %>% 
@@ -99,18 +100,31 @@ whoq_df <- data %>%
     
 # 6mo completed id list 
     pt_list_6mo <- whoq_df %>% 
-      filter(whoq_done == "Done") %>% 
-      select(id)
+      filter(whoq_done != "Not done")
+    pt_list_6mo <- pull(pt_list_6mo, id)
     
+  
 rm(df, whoq_lost)
+```
+
+# Restrict data to patients who a) are alive, b) completed WHOQOL-BREF 
+```{r complete, echo=FALSE}
+
+# Restrict data to a) pts known to be alive @6mo, b) pts not missing the WHOQOL-BREF
+    data <- data %>%
+        filter(!(id %in% lost_ids)) %>% 
+        filter(id %in% pt_list_6mo)
+
+    dim(data)
+
 ```
 
 
 # WHOQOL-BREF Scoring
 ```{r whoq_scoring, include=FALSE}
 # Scoring 
-    whoq_score <- whoq_df %>% 
-      select(-missing_count, -whoq_done) 
+    whoq_score <- data %>% 
+  select(id, str_subset(colnames(data), "whoq_"), -whoq_date, -whoq_id, -whoq_done)
     
     colnames(whoq_score) <- c("id", "qol", "satisf", "pain", "med", "enjoy", "mean", "concent", "safe", "phys", "energ", "appear", "mon", "avail", "leis", "around", "sleep", "adl", "work", "self", "relat", "sex", "frenz", "livplace", "health", "transport", "blues")
 
@@ -185,58 +199,63 @@ hist(whoq_score$d4_score,
 ```
 
 # EQ-5D-5L
-```{r eq5d, include=FALSE}
+```{r eq5d, echo=FALSE}
 eq5d_df <- data %>% 
   select(id, str_subset(colnames(data), "eq_"))
 
 eq5d_df <- eq5d_df %>% 
   mutate(eq_score = ifelse(complete.cases(eq5d_df), do.call(paste0, c(eq5d_df[, 4:8], sep="")), NA))
 
-    # Missings 
-    colSums(is.na(eq5d_df[, 9]))                  # Missing 27 folks 
+    # Missing 
+    colSums(is.na(eq5d_df[, 9]))                  # Missing 8 folks 
     
     # Look at it
     hist(eq5d_df$eq_mobil, 
          main = "Hist of EQ5D Mobility",
          xlab = "Score (1-5)", 
          xlim = c(1,6), 
-         breaks = 5)
+         breaks = 5, 
+         ylim = c(0,120))
     
     hist(eq5d_df$eq_selfcare, 
          main = "Hist of EQ5D Self Care", 
          xlab = "Score (1-5)", 
          xlim = c(1,6), 
-         breaks = 5) 
+         breaks = 5, 
+         ylim = c(0,120)) 
     
     hist(eq5d_df$eq_activ, 
          main = "Hist of EQ5D Usual Activity", 
          xlab = "Score (1-5)", 
          xlim = c(1,6), 
-         breaks = 5) 
+         breaks = 5, 
+         ylim = c(0,120)) 
     
     hist(eq5d_df$eq_pain, 
          main = "Hist of EQ5D Pain/Discomfort", 
          xlab = "Score (1-5)", 
          xlim = c(1,6), 
-         breaks = 5) 
+         breaks = 5, 
+         ylim = c(0,120)) 
     
     hist(eq5d_df$eq_anxdep, 
          main = "Hist of EQ5D Anxiety/Depression", 
          xlab = "Score (1-5)", 
          xlim = c(1,6), 
-         breaks = 5) 
+         breaks = 5, 
+         ylim = c(0,120)) 
 
 
 ```
 
 # EQVAS @ 6mo 
-```{r eqvas, include=FALSE}
+```{r eqvas, echo=FALSE}
 
 eqvas_df <- data %>% 
   select(id, eqvas)
 
     # Missing
-    colSums(is.na(eqvas_df[,2]))                      # Missing 28 
+    colSums(is.na(eqvas_df[,2]))                      # Missing 8 
     
     # Hist
     hist(eqvas_df$eqvas, 
@@ -248,14 +267,14 @@ eqvas_df <- data %>%
 ```
 
 # ADL @ 6mo
-```{r adl6, include=FALSE}
+```{r adl6, echo=FALSE}
 
 adl_df <- data %>% 
   select(id, str_subset(colnames(data), "adl6_"), -str_subset(colnames(data), "iadl6_"))
 
     # Missing 
-    sum(is.na(adl_df[,2]))                # 1 NA
-    table(adl_df$adl6_done)               # 14 not done, 142 done 
+    sum(is.na(adl_df[,2]))                # 0 NA
+    table(adl_df$adl6_done)               # 135 done 
 
     # Count & Perc by activity
     tabyl(adl_df$adl6_bath)
@@ -268,14 +287,14 @@ adl_df <- data %>%
 ```
 
 # IADL @ 6mo
-```{r iadl6, include=FALSE}
+```{r iadl6, echo=FALSE}
 
 iadl_df <- data %>% 
   select(id, str_subset(colnames(data), "iadl6_"))
 
     # Missing 
-    sum(is.na(iadl_df[,2]))                 # 1 NA
-    table(iadl_df$iadl6_done)               # 14 not done, 142 done 
+    sum(is.na(iadl_df[,2]))                 # 0 NA
+    table(iadl_df$iadl6_done)               # 135 done
     
     # Count & Perc by activity 
     tabyl(iadl_df$iadl6_phone)
@@ -290,16 +309,123 @@ iadl_df <- data %>%
 
 ```
 
-# Return to work 
-```{r , include=FALSE}
+# Return to work (BES = baseline, CES = current @6mo)
+```{r bes_ces, echo=FALSE}
+
+rtw_df <- data %>% 
+  select(id, bes, ces)
+
+rtw_qual <- rtw_df %>% 
+  mutate(bes = case_when(is.na(bes) ~ as.character(NA), 
+                         bes == 1 ~ "Working FT", 
+                         bes == 2 ~ "Working PT", 
+                         bes == 3 ~ "On paid sick leave", 
+                         bes == 4 ~ "On unpaid sick leave", 
+                         bes == 5 ~ "Temporarily laid off", 
+                         bes == 6 ~ "Unemployed, in healthcare facility", 
+                         bes == 7 ~ "Unemployed, not looking for work", 
+                         bes == 8 ~ "Unemployed, looking for work", 
+                         bes == 9 ~ "Going to school", 
+                         bes == 10 ~ "Volunteer", 
+                         bes == 11 ~ "Home maker/child care/elder care", 
+                         bes == 12 ~ "Retired", 
+                         bes == 13 ~ "Receiving disability payments", 
+                         bes == 14 ~ "Other", 
+                         bes == 15 ~ "Don't know", 
+                         bes == 16 ~ "No answer")) %>% 
+  mutate(ces = case_when(is.na(ces) ~ as.character(NA), 
+                         ces == 0 ~ "Retired or disability", 
+                         ces == 1 ~ "Working FT", 
+                         ces == 2 ~ "Working PT", 
+                         ces == 3 ~ "On paid sick leave", 
+                         ces == 4 ~ "On unpaid sick leave", 
+                         ces == 5 ~ "Temporarily laid off", 
+                         ces == 6 ~ "Unemployed, in healthcare facility", 
+                         ces == 7 ~ "Unemployed, not looking for work", 
+                         ces == 8 ~ "Unemployed, looking for work", 
+                         ces == 9 ~ "Going to school", 
+                         ces == 10 ~ "Volunteer", 
+                         ces == 11 ~ "Home maker/child care/elder care", 
+                         ces == 12 ~ "New retirement", 
+                         ces == 13 ~ "Receiving NEW disability payments", 
+                         ces == 14 ~ "Awaiting NEW approval for disability payments", 
+                         ces == 15 ~ "Other", 
+                         ces == 16 ~ "Don't know", 
+                         ces == 17 ~ "No answer"))
+  
+    # Missing 
+    colSums(is.na(rtw_qual[,-1]))             # Missing 10 Baseline employment status, 0 current employment status
+
+    # Counts 
+    tabyl(rtw_qual$bes)
+    tabyl(rtw_qual$ces)
 
 
 ```
 
 # MSPSS @ 6mo 
-```{r mspss, include=FALSE}
+```{r mspss, echo=FALSE}
+
+mspss_df <- data %>% 
+  select(id, str_subset(colnames(data), "mspss"))
+
+mspss_df <- mspss_df %>% 
+  mutate(mspss_total_score = rowSums(mspss_df[ ,-1])) %>% 
+  mutate(mspss_so_score = rowSums(mspss_df[ ,str_subset(colnames(mspss_df), "_so")])) %>% 
+  mutate(mspss_fr_score = rowSums(mspss_df[ ,str_subset(colnames(mspss_df), "_fr")])) %>% 
+  mutate(mspss_fam_score = rowSums(mspss_df[ ,str_subset(colnames(mspss_df), "_fam")])) 
+  
+    # Missing
+    sum(is.na(mspss_df[ ,15]))                                # 3 pts missing or incomplete: 3031, 3061, 3114
+    
+    df_3031 <- data %>% 
+      filter(id == 3031) %>% 
+      t()                                                     # 3031 completed everything except MSPSS
+    
+    df_3061 <- data %>% 
+      filter(id == 3061) %>% 
+      t()                                                     # 3061 completed everything except MSPSS
+    
+    df_3114 <- data %>% 
+      filter(id == 3114) %>% 
+      t()                                                     # 3114 did not answer MSPSS questions relating to S.O. 
+
+    ## Total Score Summary 
+        summary(mspss_df$mspss_total_score)  
+        hist(mspss_df$mspss_total_score, 
+         main = "MSPSS Total Score", 
+         xlab = "Score (0-84)", 
+         xlim = c(0, 84), 
+         ylim = c(0, 80), 
+         breaks = 8)
+        
+    ## Significant Other Score Summary 
+        summary(mspss_df$mspss_so_score)   
+        hist(mspss_df$mspss_so_score, 
+         main = "MSPSS Significant Other Score", 
+         xlab = "Score (0-28)", 
+         xlim = c(0, 28), 
+         ylim = c(0, 80))
+        
+    ## Friends Score Summary 
+        summary(mspss_df$mspss_fr_score)  
+        hist(mspss_df$mspss_fr_score, 
+         main = "MSPSS Friend Score", 
+         xlab = "Score(0-28)", 
+         xlim = c(0, 28), 
+         ylim = c(0, 80),)
+        
+    ## Family Score Summary 
+        summary(mspss_df$mspss_fam_score)  
+        hist(mspss_df$mspss_fam_score, 
+         main = "MSPSS Family Score", 
+         xlab = "Score (0-28)", 
+         xlim = c(0, 28), 
+         ylim = c(0, 80))
 
 
+
+rm(df_3031, df_3061, df_3114)
 ```
 
 
