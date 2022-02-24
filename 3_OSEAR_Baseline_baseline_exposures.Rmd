@@ -1,0 +1,33 @@
+---
+title: "3_OSEAR_Baseline_Exposures"
+author: "Alison E. Turnbull"
+date: "11/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+
+
+```{r expected health, include=FALSE, echo=FALSE}
+
+
+```
+
+```{r expected I/ADLs, include=FALSE, echo=FALSE}
+
+```
+
+```{r important I/ADLs, include=FALSE, echo=FALSE}
+
+```

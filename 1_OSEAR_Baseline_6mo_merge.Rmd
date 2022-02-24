@@ -1,0 +1,237 @@
+---
+title: 'OSEAR: Connecting Baseline & 6 month data'
+author: "Alison E. Turnbull"
+date: "11/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+# Read in the data 
+```{r import data, echo=FALSE, include=FALSE, warning=FALSE}
+
+baseline <- read_csv(here::here("data", "20210305_OSEAR Baseline Data.csv"), show_col_types = FALSE)
+edu_income <- read_csv(here::here("data", "20211112_OSEAR_Baseline_edu_income.csv"), show_col_types = FALSE)
+baseline_OSEAR_only<-read_csv(here::here("data", "20211116_APICSDataCollectionF-OSEARDataTransfer_DATA_2021-11-16_0922_OSEAR ONLY.csv"), show_col_types = FALSE)  ## Note, this was a re-pull on 11/16/2021 that should include EPIC data on the 8 people only enrolled in OSEAR, not APICS.
+
+### There are also baseline specific variables which were not collected until later for the patients who were co-enrolled with APICS-COVID.  
+
+## ARDS status
+ards <- read_csv(here::here("data", "20211129_OSEAR_ARDS.csv"))
+                       
+## Mental health co-morbidities
+depression <- read_csv(here::here("data", "20211129_OSEAR_Comorbidity_antidepressants.csv"))
+                                                           
+## COVID status     
+covid<- read_csv(here::here("data",  "20211129_OSEAR_hosp_dc.csv"))
+covid2 <- read_csv(here::here("data",  "20211129_OSEAR_covid_form9.csv"))
+
+## ADLS the patient can complete at hospital discharge
+dc_adls<- read_csv(here::here("data", "20211129_OSEAR_hosp_dc_ADLs.csv"))
+
+## 6 month follow-up data
+APICS_6mo <- read_csv(here::here("data", "20211108_APICS_6Mos.csv"), show_col_types = FALSE)
+COVID_6mo <- read_csv(here::here("data", "20211108_APICS_COVID_6Mos.csv"), show_col_types = FALSE)
+
+```
+
+# Complete baseline data
+```{r complete baseline data, echo=FALSE, include=FALSE}
+baseline_IDs<-baseline %>%
+      pull(id)     ## Pulling the baseline IDs
+
+edu_IDs<-edu_income %>%
+      pull(id)     ## Pulling the edu IDs
+
+temp<-setdiff(edu_IDs, baseline_IDs) ## Hmmm... not sure why 2223, 2224, and 2225 are in here...
+
+edu_income <- edu_income %>%
+    filter(!(id %in% c(2223, 2224, 2225)))
+
+table(baseline$id==edu_income$id) ##Ok - good to go!
+
+baseline<-baseline %>%
+      left_join(edu_income)
+
+### Now want to merge in EPIC data (mostly demographics) for the 8 people who were ONLY in OSEAR
+
+missing_gender<-baseline[which(is.na(baseline$demogr_sex)), "id"]
+
+baseline_OSEAR_only<-dplyr::rename(baseline_OSEAR_only, id=participant_id)
+
+# baseline_OSEAR_only[which(baseline_OSEAR_only$id %in% missing_gender$id & !is.na(baseline_OSEAR_only$demogr_age)), c("id", "demogr_age", "demogr_dob")]   ## There's a data entry error for dob in patients 3202 and 3203. Per an email on 11/16/2021 from Preethi Kadiri Cc Victor, the correct dobs are 5/10/1947 and 2/6/1996 respectively. I'll remove the incorrect entries manually below. 
+
+baseline_OSEAR_only <- baseline_OSEAR_only %>%
+                            filter(id %in% missing_gender$id) %>%
+                                  select(id, demogr_age, demogr_dob, demogr_sex, demogr_race, demogr_ethni, demogr_ins1a___1, demogr_ins1a___2, demogr_ins1a___3, demogr_ins1a___4, demogr_ins1a___5, demogr_ins1a___7, demogr_ins1a___8, demogr_ins1a___9, demogr_ins1a___10, demogr_hosp_ad_dx, ap_surg)
+
+
+ baseline_OSEAR_only <- baseline_OSEAR_only[!duplicated(baseline_OSEAR_only$demogr_age), ]             
+ baseline_OSEAR_only <- baseline_OSEAR_only[!is.na(baseline_OSEAR_only$demogr_age), ]  
+ baseline_OSEAR_only[which(baseline_OSEAR_only$id==3203), "demogr_dob" ] <-"2/6/1996"   ##This is the manual fix
+    
+## Ok, now we need to fill in the missing data in baseline with the values in baseline_OSEAR_only.  
+## The coalesce function fills the NA in the first dataframe with the value from the second one.  
+ 
+baseline<-baseline %>%
+              left_join(baseline_OSEAR_only, by="id") %>%
+                    mutate(demogr_age = coalesce(demogr_age.x, demogr_age.y)) %>% 
+                    mutate(demogr_dob = coalesce(demogr_dob.x, demogr_dob.y)) %>% 
+                    mutate(demogr_sex = coalesce(demogr_sex.x, demogr_sex.y)) %>% 
+                    mutate(demogr_race = coalesce(demogr_race.x, demogr_race.y)) %>% 
+                    mutate(demogr_ethni = coalesce(demogr_ethni.x, demogr_ethni.y)) %>% 
+                    mutate(demogr_ins1a___1 = coalesce(demogr_ins1a___1.x, demogr_ins1a___1.y)) %>% 
+   mutate(demogr_ins1a___2 = coalesce(demogr_ins1a___2.x, demogr_ins1a___2.y)) %>% 
+   mutate(demogr_ins1a___3 = coalesce(demogr_ins1a___3.x, demogr_ins1a___3.y)) %>% 
+   mutate(demogr_ins1a___4 = coalesce(demogr_ins1a___4.x, demogr_ins1a___4.y)) %>% 
+   mutate(demogr_ins1a___5 = coalesce(demogr_ins1a___5.x, demogr_ins1a___5.y)) %>% 
+   mutate(demogr_ins1a___7 = coalesce(demogr_ins1a___7.x, demogr_ins1a___7.y)) %>% 
+   mutate(demogr_ins1a___8 = coalesce(demogr_ins1a___8.x, demogr_ins1a___8.y)) %>% 
+   mutate(demogr_ins1a___9 = coalesce(demogr_ins1a___9.x, demogr_ins1a___9.y)) %>% 
+   mutate(demogr_ins1a___10 = coalesce(demogr_ins1a___10.x, demogr_ins1a___10.y)) %>% 
+                    mutate(demogr_hosp_ad_dx = coalesce(demogr_hosp_ad_dx.x, demogr_hosp_ad_dx.y)) %>% 
+                    mutate(ap_surg = coalesce(ap_surg.x, ap_surg.y)) %>% 
+                    select(-demogr_age.x, -demogr_dob.x, -demogr_sex.x, -demogr_race.x, -demogr_ethni.x, -demogr_ins1a___1.x, -demogr_ins1a___2.x, -demogr_ins1a___3.x, -demogr_ins1a___4.x, -demogr_ins1a___5.x, -demogr_ins1a___7.x, -demogr_ins1a___8.x, -demogr_ins1a___9.x, -demogr_ins1a___10.x, -demogr_hosp_ad_dx.x, -ap_surg.x, -demogr_age.y, -demogr_dob.y, -demogr_sex.y, -demogr_race.y, -demogr_ethni.y, -demogr_ins1a___1.y, -demogr_ins1a___2.y, -demogr_ins1a___3.y, -demogr_ins1a___4.y, -demogr_ins1a___5.y, -demogr_ins1a___7.y, -demogr_ins1a___8.y, -demogr_ins1a___9.y, -demogr_ins1a___10.y, -demogr_hosp_ad_dx.y, -ap_surg.y)
+    
+## Cleaning up variable names              
+baseline<-baseline %>%
+            clean_names()
+
+
+## Adding data on ARDS status
+ards <- ards %>%
+         clean_names() %>%
+            dplyr::rename(id=participant_id) %>%
+                  select(id, ards_pf_300, ards_img_na_3)
+
+baseline<-baseline %>%
+            left_join(ards, by="id") 
+ 
+    
+## Adding mental health co-morbidities
+depression <- depression %>%
+         clean_names() %>%
+            dplyr::rename(id=participant_id) %>%
+                  select(id, fci_cci_16_23, fci_cci_16_24, fci_cci_antidep)
+
+baseline <- baseline %>%
+             select(-fci_cci_16_23, -fci_cci_16_24, -fci_cci_antidep) %>%
+                     left_join(depression, by="id") 
+                                                           
+## Adding COVID status     
+covid <- covid %>%
+         clean_names() %>%
+            dplyr::rename(id=participant_id) %>%
+                  select(id, hosp_dc_limit, hosp_dc_limit_y, hosp_dc_covid19)
+
+covid2 <- covid2 %>%
+          clean_names() %>%
+            dplyr::rename(id=participant_id) %>%
+                  select(id, form_9_1, from_9_2_1, from_9_2_0)
+
+
+baseline <- baseline %>%
+             select(-hosp_dc_limit, hosp_dc_covid19) %>%
+                     left_join(covid, by="id") 
+
+baseline <- baseline %>%
+               left_join(covid2, by="id") 
+
+## Adding ADLS the patient can complete at hospital discharge
+dc_adls <- dc_adls %>%
+            clean_names() %>%
+               dplyr::rename(id=participant_id) %>%
+                  select(id, adl_bath_hosp_dc, adl_dress_hosp_dc, adl_toil_hosp_dc, adl_trans_hosp_dc,  adl_cntine_hosp_dc, adl_feed_hosp_dc)
+
+baseline <- baseline %>%
+             select(-adl_bath_hosp_dc, -adl_dress_hosp_dc, -adl_toil_hosp_dc, -adl_trans_hosp_dc, -adl_cntine_hosp_dc, -adl_feed_hosp_dc) %>%
+                     left_join(dc_adls, by="id") 
+
+rm(edu_IDs, temp, missing_gender, baseline_OSEAR_only, edu_income, ards, covid, covid2, depression, dc_adls)
+
+
+```
+
+# Merge the 6 month data
+```{r combine 6 month data, echo=FALSE, include=FALSE}
+
+#Combining followup data
+fup<-APICS_6mo %>%
+       select(-US) %>%
+          bind_rows(COVID_6mo)
+
+
+# table(duplicated(fup$p1_subid)) ##Sweet, no duplicate IDs.
+
+```
+
+```{r Lost to FU, echo=FALSE, include=FALSE}
+# Currently, the variable p1_mortstatus has the following distribution: 
+
+# table(fup$p1_mortstatus)
+# 
+# 0 1 2 
+# 5 159 4 
+
+# Per Victor in an email on 11/12/2021:
+# 0 = dead
+# 1 = alive
+# 2 = unknown mortality status
+
+fup<-fup %>%
+      mutate(status_6mo = factor(p1_mortstatus)) %>% 
+          mutate(status_6mo=fct_recode(status_6mo, dead="0", alive="1", lost="2")) 
+
+baseline_IDs<-baseline %>%
+            pull(id)  ## Pulling all the baseline IDs
+
+fup_IDs<-fup %>%
+      pull(p1_subid) ## Pulling all the follow-up IDs
+
+losts<-setdiff(baseline_IDs, fup_IDs) # 1014 2011 3011 3016 3019 3053 3102 3108 3112 3204 5019
+
+# Emailed Victor about these missing IDs.,He replied in an email from 11/11/2021 with explanations. 
+# Reply from Victor with explanations is in file here::here/data/OSEAR_missing_6mo.msg
+
+dead<-c(1014, 3011, 3053, 3102, 3112, 5019)
+withdrawn_lost<-c(2011, 3016, 3019, 3108, 3204)
+
+victor_email<-tibble(id=c(dead, withdrawn_lost), status_6mo=rep(c("dead", "lost"), c(6, 5))) # Converting Victor's email into a tibble
+
+fup<-dplyr::rename(fup, id=p1_subid) # Renaming the ID variable so that rows can be combinded
+
+fup<-bind_rows(fup, victor_email) # Adding Victor's email data to the follow-up dataframe
+
+rm(dead, fup_IDs, losts, withdrawn_lost)
+
+# table(fup$status_6mo, useNA = "ifany"), #1 missing!, 3203 - find it!
+# This person definitely completed the 6 month follow-up call with Emma - not sure why p1_mortstatus wasn't entered into REDCap.,
+
+fup[which((fup$id==3203)), "status_6mo"]<-"alive"
+
+table(fup$status_6mo, useNA = "ifany")
+
+## Cleaning up variable names
+fup <- fup %>%
+          clean_names()
+
+```
+
+```{r merge baseline and fup, echo=FALSE, include=FALSE}
+
+dat<-left_join(baseline, fup, by="id")
+
+rm(APICS_6mo, COVID_6mo, victor_email)
+
+```
+

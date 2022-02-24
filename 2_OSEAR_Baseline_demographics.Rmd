@@ -1,0 +1,318 @@
+---
+title: "2_OSEAR_Baseline_Demographics"
+author: "Alison E. Turnbull"
+date: "11/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+## This script assumes that all code in the file 1_OSEAR_Baseline_6mo_merge.Rmd has already been run.
+## The environment holds the data frames: baseline, dat, and fup
+## The codebook for the baseline demographic data cleaned in this script is a file in this project called: "20210306_OSEAR Baseline Codebook.csv"
+
+```{r missings, include=FALSE, echo=FALSE}
+## This chunk is temporary as we work on cleaning and missing data for the 8 people co-enrolled in APICS-COVID and the 10 people ONLY enrolled in OSEAR. 
+coenrolled<-dat %>%
+    filter(id %in% 3202:3209)
+
+osear_only<-dat %>%
+    filter(id %in% 3125:3141)
+
+```
+
+```{r age, include=FALSE, echo=FALSE}
+
+# quantile(dat$demogr_age, na.rm = TRUE)  # Age range is 21 - 82, median = 53
+
+dat<-dat %>%
+    mutate(age=demogr_age) %>%
+      select(-demogr_age)
+```
+
+```{r sex, include=FALSE, echo=FALSE}
+
+# glimpse(dat$demogr_sex)                                # Ok, this is currently numeric.  Per codebook: 1 = Male, 2 = Female
+# table(dat$demogr_sex, useNA = "ifany")                 # 99 men, 81 women, none missing
+
+dat<-dat %>%
+    mutate(sex=demogr_sex) %>%
+      select(-demogr_sex) %>%
+        mutate(sex=factor(sex, exclude=NA)) %>%
+          mutate(sex=fct_recode(sex, male="1", female="2"))
+```
+
+```{r race, include=FALSE, echo=FALSE}
+
+# missing_race<-dat[which(is.na(dat$demogr_sex)), "id"]
+# table(dat$demogr_race, useNA = "ifany")   #1 = Asian, 2 = Black, 4 = White, 6 = Multiracial, 7 = Unknown
+   
+   # 1    2    4    6    7 
+   # 3   52  115    1    9    
+
+dat<-dat %>%
+    mutate(race=demogr_race) %>%
+      select(-demogr_race) %>%
+        mutate(race=factor(race, exclude=NA)) %>%
+          mutate(race=fct_recode(race, Asian = "1", Black = "2", Multiracial="6", White = "4", Unknown= "7"))
+
+```
+
+```{r ethnicity, include=FALSE, echo=FALSE}
+
+# table(dat$demogr_ethni, useNA = "ifany")   #0 = No, 1 = Yes, 2 = Unknown
+
+#   0    1    2 
+# 171    5    4    
+
+dat<-dat %>%
+    mutate(hispanic=demogr_ethni) %>%
+      select(-demogr_ethni) %>%
+        mutate(hispanic=factor(hispanic, exclude=NA)) %>%
+          mutate(hispanic=fct_recode(hispanic, "Not hispanic" = "0", Hispanic = "1", Unknown= "2"))
+
+```
+
+```{r education, include=FALSE, echo=FALSE}
+
+# table(dat$edu, useNA = "ifany")  #Missing for 5, NA for 10
+
+dat<-dat %>%
+        mutate(edu=factor(edu, exclude=NA)) %>%
+          mutate(edu=fct_relevel(edu, c("8th grade or less", "Some high school, but did not graduate", "High school graduate or GED", 
+                                        "Some college or 2-year degree", "4-year college graduate", "More than 4-year college degree"))) %>%
+            mutate(edu=fct_recode(edu, Missing = "Not available")) %>%
+              mutate(edu=fct_explicit_na(edu, na_level="Missing"))
+```
+
+```{r income and adi, include=FALSE, echo=FALSE}
+
+# "income"    - is the median income of the zip code which I think can be a bit misleading
+
+# "adi_dec"   - is the state decile for the ADI or Area Deprivation Index for the neighborhood at the level of Census Block Group.  
+#               It's a measure of socioeconomic disadvantage with higher numbers associated with greater disadvantage on factors including
+#               income, education, employment, and housing equality. Missing for 3 people. Range is 1 - 10, median = 7
+
+# "adi_perc"  - Percentile at the NATIONAL level of the ADI. Again, higher numbers = greater deprivation.  Missing for 3 people.  Range 1 - 100, median =39
+
+
+# All these variables are numeric and don't appear to require further cleaning. Only 3 missing values. 
+        
+```
+
+```{r insurance coverage, include=FALSE, echo=FALSE}
+ 
+# demogr_ins1a_1 = private insurance.  1 = TRUE
+dat <- dat %>%
+        mutate(insur_private = factor(demogr_ins1a_1, exclude = NA)) %>%
+          mutate(insur_private=fct_recode(insur_private, No="0", Yes="1"))
+
+
+# demogr_ins1a_3 = Medicaid.  1 = TRUE
+dat <- dat %>%
+        mutate(insur_Mcaid = factor(demogr_ins1a_3, exclude = NA)) %>%
+          mutate(insur_Mcaid=fct_recode(insur_Mcaid, No="0", Yes="1"))
+
+
+# demogr_ins1a_5 = Medicare.  1 = TRUE
+dat <- dat %>%
+        mutate(insur_Mcare= factor(demogr_ins1a_5, exclude = NA)) %>%
+          mutate(insur_Mcare=fct_recode(insur_Mcare, No="0", Yes="1"))
+
+
+# "demogr_ins1a_8" = No insurance      
+dat <- dat %>%
+        mutate(insur_None= factor(demogr_ins1a_8, exclude = NA)) %>%
+          mutate(insur_None=fct_recode(insur_None, Insured="0", Uninsured="1"))
+
+# Note that there are also variables for Champ-VA/TRICARE, Ryan White HIV/AIDS program, Worker's comp, awaiting Medicaid/Medicare approval, and others.
+
+```
+
+```{r admission diagnosis, include=FALSE, echo=FALSE}
+# str(dat$demogr_hosp_ad_dx) #Numeric 1 - 21
+# table(is.na(dat$demogr_hosp_ad_dx)) - no missings
+# Taking the codings from the file: \\homer\needham\Dale\Studies & Projects\APICS\CRFs\APICS CRFs & Manuals\In hospital\Baseline\Demographics\APICS_Demogr_Ins_Dx_12.3.18_Finalized.docx
+
+dat<-dat %>% 
+    mutate(adm_dx=factor(demogr_hosp_ad_dx, exclude=NA)) %>% 
+           mutate(adm_dx=fct_recode(adm_dx, "Respiratory (including pneumonia)"="16", 
+                                         Cardiovascular="1", 
+                                         Gastrointestinal="6", 
+                                         Oncology="12", 
+                                         "Severe sepsis" = "18", 
+                                         "Infectious Disease" = "9", 
+                                         "Nephrology/Urology" = "10", 
+                                         Trauma = "19")) %>%
+            mutate(adm_dx=fct_infreq(adm_dx)) %>%
+            mutate(adm_dx=fct_other(adm_dx, drop=c("2", "5", "7", "11", "15", "19", "20", "21"), other_level = "Other"))
+```
+
+```{r surgical status, include=FALSE, echo=FALSE}
+
+str(dat$ap_surg) #Numeric 1=Not surgical pt, 2=Elective, 3=Emergent
+table(is.na(dat$ap_surg)) # No missings
+
+dat<-dat %>% 
+    mutate(sx=factor(ap_surg, exclude=NA)) %>% 
+           mutate(sx=fct_recode(sx, "Not Surgical"="1", 
+                                         Elective="2", 
+                                         Emergenct="3")) %>%
+            mutate(sx=fct_infreq(sx))
+
+```
+
+```{r nursing home or rehab prior in prior year, include=FALSE, echo=FALSE}
+# table(dat$hus_nursing, useNA = "ifany")  # No one had been in a nursing home
+# table(dat$hus_rehab, useNA = "ifany")    # 6 had been in a rehab center
+
+#Question texts: 
+# Was pt admitted to nursing home in 1 year period before hospitalization?
+# Was pt admitted to rehab in 1 year period before hospitalization?
+
+dat<-dat %>%
+    mutate(rehab=hus_rehab) %>%
+      select(-c(hus_rehab, hus_nursing)) %>%
+        mutate(rehab=factor(rehab, exclude=NA)) %>%
+          mutate(rehab=fct_recode(rehab, No="0", Yes="1"))
+```
+
+```{r COVID, include=FALSE, echo=FALSE}
+# missing_covid<-dat[which(is.na(dat$hosp_dc_covid19)), "id"]
+
+## For pts with data, it's coded based on: \\homer\needham\Dale\Studies & Projects\APICS\CRFs\CRF Packets\Baseline\APICS_Form6_Hospdc_3.21.2020-COVID.docx
+## "Was patient tested for the COVID-19 virus during this hospital admission (including in the ED for this admission)?"
+## 1 = Yes, Positive     2 = Yes, Negative      0 = No    
+
+dat<- dat %>%
+        mutate(covid=factor(hosp_dc_covid19.y, exclude=NA)) %>%
+          mutate(covid=fct_recode(covid, Yes="1", 
+                                          No="2", 
+                                          No="0")) 
+
+## COVID is presumed negative for pts enrolled pre-COVID: Beth Israel: 1008-1022, IMC: 2011-2028, JHU: 3001-3056, VUMC: 5007-5018
+pre_covid<-c(1008:1022, 2011:2028, 3001:3056, 5007:5018)
+ 
+    dat$covid[dat$id %in% pre_covid]<- "No"  
+
+    
+## 3125, 3126, 3127, 3128, 3129, 3130, 3131, 3132, 3133, and 3141 were only enrolled in OSEAR and still need to have data collected from EPIC. 
+
+## Pts co-enrolled in OSEAR and APICS-COVID (3202, 3203, 3204, 3205, 3206, 3207, 3208, 3209) have COVID status recorded in the variable "from_9_2_1"
+# The coding for these patients can be found here:\\homer\needham\Dale\Studies & Projects\APICS\APICS-COVID\CRFs & Manuals\Baseline-Hospital\CRF PDFs\APICS-C_Form_9_COVID19_4.29.21_clean.pdf
+    
+#  When from_9_2_1 == 1, the patient had COVID and when from_9_2_1 == 0 they did not. 
+    dat$covid[dat$from_9_2_1==1]<- "Yes"
+    dat$covid[dat$from_9_2_1==0]<- "No"
+```
+
+```{r ARDS, include=FALSE, echo=FALSE}
+## Email from Danielle Groat (Statistician at IMC) on how to code this for consistency with APICS received 11/29/2021
+ 
+# Alison,
+# 
+# There were 2 datapoints in the APICS-01 dataset that I used to identify ARDS:
+# 
+# REDCap column label                      Definition
+# ards_pf_300                              Yes/No PaO2/FiOs < 300?
+# ards_img_na___3                          Yes/No No qualifying imaging
+# 
+# I categorized study participants as having ARDS if the following two criteria were met:
+# 1.	PF ratio > 300
+# 2.	Qualifying imaging was present 
+# 
+# Sample R code for creating ARDS flag:
+# df$ards <- 0
+# df$ards[df$ards_pf_300 == 1 & df$ards_img_na___3 == 0] <- 1
+# 
+# Notice that ards_img_na___3 is coded counterintuitively.
+# 
+# Hope this helps!
+# 
+# Thanks,
+# Danielle
+
+```
+
+```{r baseline mental health, include=FALSE, echo=FALSE}
+# For all of these variables see \\homer\needham\Dale\Studies & Projects\APICS\CRFs\CRF Packets\Baseline\APICS_Form2_ICUadd_6.11.2019.docx
+
+# table(dat$fci_cci_antidep, dat$fci_cci_16_23,  useNA = "ifany")  Interesting to see the intersection between depression and antidepression meds. 
+
+# fci_cci_16_23 = Baseline depression - see page 2, question 23, 0 = no, 1 = yes 
+
+# fci_cci_antidep = Baseline taking antidepressants - see page 3, question b, 0 = no, 1 = PRN, 2 = routine, 3 = both
+
+dat <- dat %>%
+        mutate(depress=factor(fci_cci_16_23, exclude=NA)) %>%
+          mutate(depress=fct_recode(depress, Yes="1", 
+                                             No ="0")) 
+dat$depress[dat$fci_cci_antidep >0]<- "Yes"
+
+# table(dat$depress, useNA = "ifany") -   WOW.  33% of people either have a history of depression or are taking anti-depressants. 
+
+# fci_cci_16_24 = Baseline anxiety - see page 2, question 24, 0 = no, 1 = yes : Anxiety (incl panic, OCD, PTSD, any phobia) 
+
+dat <- dat %>%
+        mutate(anxiety=factor(fci_cci_16_24, exclude=NA)) %>%
+          mutate(anxiety=fct_recode(anxiety, Yes="1", 
+                                             No ="0"))  # - 16 people ~10% with an anxiety disorder. 
+```
+
+```{r clinical frailty scale, include=FALSE, echo=FALSE}
+# For this variables see \\homer\needham\Dale\Studies & Projects\APICS\CRFs\CRF Packets\Baseline\APICS_Form1_Bsln interview_10.1.20.docx
+
+# Consider the participant’s overall condition 2 weeks prior to this admission to hospital. How fit or frail was she/he at that time point?
+# Ranges from 1 - 8.  1 = Very fit.  3 = Medical problems are well controlled but not regularly active beyond walking.  6 = Moderately Frail, 8 = Completely dependent. 
+
+# table(is.na(dat$cfs))  None missing. 
+
+# cfs_admin  Who was CFS administered to? 1=Participant, 2=Proxy
+
+# table(dat$cfs_admin, useNA="ifany)  # Answers provided by proxies for only 6 patients. 
+
+# quantile(dat$cfs)  Median = 3, Range = 1 - 7, IQR = 2-4
+
+```
+
+```{r MSPSS, include=FALSE, echo=FALSE}
+# For this variables see \\homer\needham\Dale\Studies & Projects\APICS\CRFs\CRF Packets\Baseline\APICS_Form1_Bsln interview_10.1.20.docx
+# Scoring information here: https://help.greenspacehealth.com/article/92-perceived-social-support-mspss
+
+
+# m1_:m12_ = mspss, score for each question ranges from 1-7
+
+mspss<-dat %>%
+            select(m1_so, m2_so, m3_fam, m4_fam, m5_so, m6_fr,  m7_fr,  m8_fam, m9_fr,  m10_so, m11_fam, m12_fr)  
+
+
+# Figure out how much missing data we face (none!) and then compute total score, mean score, and subscales for significant other, family, and friends.  
+mspss <- mspss %>%
+            rowwise() %>%
+            dplyr::mutate(
+              n_missing = sum(is.na(c_across(m1_so:m12_fr))), 
+              mspss_total = sum(c_across(m1_so:m12_fr)), 
+              mspss_mean = mspss_total/12, 
+              mspss_so = sum(m1_so, m2_so, m5_so, m10_so)/4, 
+              mspss_fam = sum(m3_fam, m4_fam,m8_fam, m11_fam)/4,
+              mspss_fr = sum(m6_fr, m7_fr, m9_fr, m12_fr)/4) %>%
+                select(mspss_total, mspss_mean, mspss_so, mspss_fam, mspss_fr) %>%
+                    mutate_if(is.numeric, round, 1)
+                        
+dat<-bind_cols(dat, mspss)
+```
+
+```{r ADLs at hospital discharge, }
+# Consider patient’s status ideally on the day of discharge or the closest time to discharge if it is not available.
+```
+
