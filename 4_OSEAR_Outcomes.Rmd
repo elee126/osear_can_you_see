@@ -1,0 +1,46 @@
+---
+title: "4_OSEAR_Outcomes"
+author: "Alison E. Turnbull"
+date: "2/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+```{r 6 mo ADLs/IADLs performed independently, include=FALSE, echo=FALSE}
+
+```
+
+```{r 6 mo perceived health, include=FALSE, echo=FALSE}
+
+```
+
+```{r 6 mo WHO-QoL BREF score, include=FALSE, echo=FALSE}
+
+```
+
+```{r # & % of Expectations met, include=FALSE, echo=FALSE}
+
+```
+
+```{r # & % of IMPORTANT Expectations met, include=FALSE, echo=FALSE}
+
+```
+
+```{r Are expectations fulfilled?, include=FALSE, echo=FALSE}
+
+```
+
+
+
+

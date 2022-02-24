@@ -17,10 +17,7 @@ library(dplyr)
 library(janitor)
 ```
 
-
-
 ```{r expected health, include=FALSE, echo=FALSE}
-
 
 ```
 

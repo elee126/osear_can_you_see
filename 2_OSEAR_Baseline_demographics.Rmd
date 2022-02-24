@@ -167,7 +167,7 @@ dat<-dat %>%
     mutate(sx=factor(ap_surg, exclude=NA)) %>% 
            mutate(sx=fct_recode(sx, "Not Surgical"="1", 
                                          Elective="2", 
-                                         Emergenct="3")) %>%
+                                         Emergent="3")) %>%
             mutate(sx=fct_infreq(sx))
 
 ```
@@ -312,7 +312,11 @@ mspss <- mspss %>%
 dat<-bind_cols(dat, mspss)
 ```
 
-```{r ADLs at hospital discharge, }
+```{r ADLs performed independently at hospital discharge, }
 # Consider patient’s status ideally on the day of discharge or the closest time to discharge if it is not available.
 ```
+
+```{r Employment status, echo=FALSE}
+```
+
 
