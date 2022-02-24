@@ -95,6 +95,10 @@ dat<-dat %>%
               mutate(edu=fct_explicit_na(edu, na_level="Missing"))
 ```
 
+```{r Employment status, echo=FALSE}
+
+```
+
 ```{r income and adi, include=FALSE, echo=FALSE}
 
 # "income"    - is the median income of the zip code which I think can be a bit misleading
@@ -139,6 +143,21 @@ dat <- dat %>%
 
 ```
 
+```{r nursing home or rehab prior in prior year, include=FALSE, echo=FALSE}
+# table(dat$hus_nursing, useNA = "ifany")  # No one had been in a nursing home
+# table(dat$hus_rehab, useNA = "ifany")    # 6 had been in a rehab center
+
+#Question texts: 
+# Was pt admitted to nursing home in 1 year period before hospitalization?
+# Was pt admitted to rehab in 1 year period before hospitalization?
+
+dat<-dat %>%
+    mutate(rehab=hus_rehab) %>%
+      select(-c(hus_rehab, hus_nursing)) %>%
+        mutate(rehab=factor(rehab, exclude=NA)) %>%
+          mutate(rehab=fct_recode(rehab, No="0", Yes="1"))
+```
+
 ```{r admission diagnosis, include=FALSE, echo=FALSE}
 # str(dat$demogr_hosp_ad_dx) #Numeric 1 - 21
 # table(is.na(dat$demogr_hosp_ad_dx)) - no missings
@@ -170,21 +189,6 @@ dat<-dat %>%
                                          Emergent="3")) %>%
             mutate(sx=fct_infreq(sx))
 
-```
-
-```{r nursing home or rehab prior in prior year, include=FALSE, echo=FALSE}
-# table(dat$hus_nursing, useNA = "ifany")  # No one had been in a nursing home
-# table(dat$hus_rehab, useNA = "ifany")    # 6 had been in a rehab center
-
-#Question texts: 
-# Was pt admitted to nursing home in 1 year period before hospitalization?
-# Was pt admitted to rehab in 1 year period before hospitalization?
-
-dat<-dat %>%
-    mutate(rehab=hus_rehab) %>%
-      select(-c(hus_rehab, hus_nursing)) %>%
-        mutate(rehab=factor(rehab, exclude=NA)) %>%
-          mutate(rehab=fct_recode(rehab, No="0", Yes="1"))
 ```
 
 ```{r COVID, include=FALSE, echo=FALSE}
@@ -242,6 +246,15 @@ pre_covid<-c(1008:1022, 2011:2028, 3001:3056, 5007:5018)
 # Thanks,
 # Danielle
 
+##### Also note the variable: no_ards_imv_1
+##### This was coded as "1" if the box next to the following statement on From 4 was checked:
+##### "Patient never met criteria for ARDS or never received invasive mechanical ventilation via ETT or tracheostomy, SKIP the rest of the form."
+
+# table(dat$ards_pf_300, useNA = "ifany")
+# table(dat$ards_img_na_3)
+
+dat$ards <- 0
+dat$ards[dat$ards_pf_300 == 1 & dat$ards_img_na_3 == 0] <- 1   #59 of 180 (33%) met ARDS criteria
 ```
 
 ```{r baseline mental health, include=FALSE, echo=FALSE}
@@ -314,9 +327,6 @@ dat<-bind_cols(dat, mspss)
 
 ```{r ADLs performed independently at hospital discharge, }
 # Consider patient’s status ideally on the day of discharge or the closest time to discharge if it is not available.
-```
-
-```{r Employment status, echo=FALSE}
 ```
 
 
