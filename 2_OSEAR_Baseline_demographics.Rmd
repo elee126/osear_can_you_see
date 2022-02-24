@@ -96,7 +96,7 @@ dat<-dat %>%
 ```
 
 ```{r Employment status, echo=FALSE}
-
+# Send Danielle an email about this on 2/24
 ```
 
 ```{r income and adi, include=FALSE, echo=FALSE}
@@ -326,7 +326,43 @@ dat<-bind_cols(dat, mspss)
 ```
 
 ```{r ADLs performed independently at hospital discharge, }
-# Consider patient’s status ideally on the day of discharge or the closest time to discharge if it is not available.
+# Consider patient’s status ideally on the day of hospital discharge or the closest time to hospital discharge if it is not available.
+# Taken from APICS_Form_6_Hospdc.  Instructions: 
+# “Independence” means without ANY supervision, direction or active personal assistance, except as noted below
+#  Answer these questions using ONLY data available in the EMR.
+# 1 was checkd for Independent and 0 for Dependent
+
+#Bathing
+dat <- dat %>%
+        mutate(dc_adl_bath=factor(adl_bath_hosp_dc, exclude=NA)) %>%
+          mutate(dc_adl_bath=fct_recode(dc_adl_bath, Indepdendent="1", 
+                                                     Dependent ="0"))
+#Dressing
+dat <- dat %>%
+        mutate(dc_adl_dress=factor(adl_dress_hosp_dc, exclude=NA)) %>%
+          mutate(dc_adl_dress=fct_recode(dc_adl_dress, Indepdendent="1", 
+                                                       Dependent ="0"))
+#Using a toilet
+dat <- dat %>%
+        mutate(dc_adl_toil=factor(adl_toil_hosp_dc, exclude=NA)) %>%
+          mutate(dc_adl_toil=fct_recode(dc_adl_toil, Indepdendent="1", 
+                                                       Dependent ="0"))
+#Transfer (gets in and out of bed)
+dat <- dat %>%
+        mutate(dc_adl_bed=factor(adl_trans_hosp_dc, exclude=NA)) %>%
+          mutate(dc_adl_bed=fct_recode(dc_adl_bed, Indepdendent="1", 
+                                                       Dependent ="0"))
+
+#Continence
+dat <- dat %>%
+        mutate(dc_adl_cont=factor(adl_cntine_hosp_dc, exclude=NA)) %>%
+          mutate(dc_adl_cont=fct_recode(dc_adl_cont, Indepdendent="1", 
+                                                       Dependent ="0"))
+#Feeding
+dat <- dat %>%
+        mutate(dc_adl_feed=factor(adl_feed_hosp_dc, exclude=NA)) %>%
+          mutate(dc_adl_feed=fct_recode(dc_adl_feed, Indepdendent="1", 
+                                                       Dependent ="0"))
 ```
 
 
