@@ -41,6 +41,18 @@ library(janitor)
 
 ```
 
+```{r employement status at 6 mo, include=FALSE, echo=FALSE}
+## See the coding on the baseline employment status for guidelines. 
+## ces stands for Current Employment Status.  The question is on page 14 of 
+## H:\K01 research\Aim 3 - Cohort Study\APIC CRFs\Combined APICS OSEAR Follow-up\APICS_6_months_followup_packet_7.25.2019.docx
+
+# "Which best describes your current employment situation?"
+# The one exception is that "retired or disabled" is coded as "0" for ces6_ces
+
+table(fup$ces6_ces, useNA = "ifany")
+
+
+```
 
 
 

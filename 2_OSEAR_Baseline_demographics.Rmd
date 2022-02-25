@@ -97,6 +97,51 @@ dat<-dat %>%
 
 ```{r Employment status, echo=FALSE}
 # Send Danielle an email about this on 2/24
+# Reply later the same day is below
+
+# Alison,
+
+# Below I’ve included 
+# -	R code that converts numerical coding of employment status to one-hot-encoding for the condensed categories 
+# -	Employment question from the 6-month follow up form
+# 
+# I remember one of the Thursday calls many months ago Dale & Victor guided the discussion on how best condense the 17 options into 6 categories. The code below reflects the decisions made during that call.
+# 
+# -Danielle 
+
+
+# df.mon6$working <- 0
+# df.mon6$working[df.mon6$MON6_bes2_prior_adm %in% c(1, 2, 5, 8, 9, 10, 11, 15)] <- 1
+# df.mon6$sickleave <- 0
+# df.mon6$sickleave[df.mon6$MON6_bes2_prior_adm %in% c(3, 4)] <- 1
+# df.mon6$retired <- 0
+# df.mon6$retired[df.mon6$MON6_bes2_prior_adm == 12] <- 1
+# df.mon6$disability <- 0
+# df.mon6$disability[df.mon6$MON6_bes2_prior_adm %in% c(13, 14)] <- 1
+# df.mon6$unemployed <- 0
+# df.mon6$unemployed[df.mon6$MON6_bes2_prior_adm %in% c(6, 7)] <- 1
+# df.mon6$rtw.unknown <- 0
+# df.mon6$rtw.unknown[df.mon6$working == 0 & df.mon6$sickleave == 0 & df.mon6$retired == 0 & 
+#                       df.mon6$disability == 0 & df.mon6$unemployed == 0] <- 1
+
+
+# Important to note that baseline employment was asked about during the 6-month follow-up with the following question:
+# Which best describes your employment situation just prior to hospital admission?
+
+ dat$working <- 0
+ dat$working[dat$bes2_prior_adm %in% c(1, 2, 5, 8, 9, 10, 11, 15)] <- 1
+ dat$sickleave <- 0
+ dat$sickleave[dat$bes2_prior_adm %in% c(3, 4)] <- 1
+ dat$retired <- 0
+ dat$retired[dat$bes2_prior_adm == 12] <- 1
+ dat$disability <- 0
+ dat$disability[dat$bes2_prior_adm %in% c(13, 14)] <- 1
+ dat$unemployed <- 0
+ dat$unemployed[dat$bes2_prior_adm %in% c(6, 7)] <- 1
+ dat$baseline_employment.unknown <- 0
+ dat$baseline_employment.unknown[dat$working == 0 & dat$sickleave == 0 & dat$retired == 0 & 
+                       dat$disability == 0 & dat$unemployed == 0] <- 1
+
 ```
 
 ```{r income and adi, include=FALSE, echo=FALSE}
