@@ -370,6 +370,28 @@ mspss <- mspss %>%
 dat<-bind_cols(dat, mspss)
 ```
 
+```{r CD resilience scale, include=FALSE, echo=FALSE}
+# Scoring of the scale is based on summing the total of all items, each of which is scored from 0-4. 
+# For the CD-RISC-10, the total score ranges from 0-40.
+# For the Cd-RISC-10 (n = 764), median score was 32, with lowest to highest quartiles being 0 -29, 30 - 32, 33-36, and 37-40 (Campbell-Sills et al, 2009).
+
+#  osear_4_a ->     #  I am able to adapt when changes occur         
+#  osear_4_b ->     #  I can deal with whatever comes my way         
+#  osear_4_c ->     #  I try to see the humorous side of things when I am faced with problems        
+#  osear_4_d ->     #  Having to cope with stress can make me stronger        
+#  osear_4_e ->     #  I tend to bounce back after illness, injury, or other hardships         
+#  osear_4_f ->     #  I believe I can achieve my goals, even if there are obstacles          
+#  osear_4_g ->     #  Under pressure, I stay focused and think clearly         
+#  osear_4_h ->     #  I am not easily discouraged by failure         
+#  osear_4_i ->     #  I think of myself as a strong person when dealing with life’s challenges and difficulties         
+#  osear_4_j ->     #  I am able to handle unpleasant or painful feelings like sadness, fear and anger
+
+dat <-dat %>%
+        mutate(cd_score = osear_4_a + osear_4_b + osear_4_c + osear_4_d + osear_4_e + osear_4_f + osear_4_g + osear_4_h + osear_4_i + osear_4_j)
+
+# quantile(dat$cd_score, na.rm = TRUE)  So, this is completely normal to even a bit more resilient than the national average.
+```
+
 ```{r ADLs performed independently at hospital discharge, }
 # Consider patient’s status ideally on the day of hospital discharge or the closest time to hospital discharge if it is not available.
 # Taken from APICS_Form_6_Hospdc.  Instructions: 
@@ -409,5 +431,3 @@ dat <- dat %>%
           mutate(dc_adl_feed=fct_recode(dc_adl_feed, Indepdendent="1", 
                                                        Dependent ="0"))
 ```
-
-
