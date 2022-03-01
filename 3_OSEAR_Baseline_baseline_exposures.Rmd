@@ -13,18 +13,109 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(here)
 library(plyr)
-library(dplyr)
+library(dplyr, warn.conflicts = FALSE)
 library(janitor)
+library(stringr)
 ```
 
 ```{r expected health, include=FALSE, echo=FALSE}
 
+# table(is.na(dat$osear_1))               Missing for 3 - that is NOT ok. Go back and look at the paper CRFs to figure out what's up.
+# dat[which(is.na(dat$osear_1)), "id"]    2011, 2014, 2015 - Interesting... these are the first 3 from IMC. Need to follow-up.
+#                                         Note that 2011 was later lost to follow-up, but 2014 and 2015 are in the final cohort. 
+
+dat<-dplyr::rename(dat, exp_VAS=osear_1)
+# quantile(dat$exp_VAS, na.rm = TRUE)
+hist(dat$exp_VAS, na.rm=TRUE)
 ```
 
 ```{r expected I/ADLs, include=FALSE, echo=FALSE}
+# I am going to read a list of 13 activities.  For each activity, tell me if you expect that you'll be able to perform it *without help*
+# 6 months from now. For each activity say: "yes", "no", or "unsure."
+# Note: Yes = 1, No = 0, and Unsure = "2"
 
+# dat[which(is.na(dat$osear_2_a)), "id"] --> Again, 2011, 2014, and 2015 - the same 3 from Utah.  I have a feeling the baseline survey
+                                            #was either not collected or not entered for these 3.            
+
+exp_ADLs<-dat %>%
+            select(starts_with("osear_2_"))  %>%
+            rename_with(~str_replace(., "osear_2", "expect"), everything()) %>%
+                  mutate(across(everything(), ~factor(.x))) %>%
+                          mutate(across(everything(), ~fct_recode(.x, Yes = "1", 
+                                                                      No  = "0", 
+                                                                      Unsure="2"))) ## This converts all the expected I/ADLs to factors
+
+## Re-naming the 13 variables that capture what people EXPECTED to be able to do in 6 months.
+exp_ADLs<-exp_ADLs %>%
+  dplyr::rename(exp_feed=expect_a) %>%   #Eating food (someone else can prepare the food)
+  dplyr::rename(exp_bath=expect_b) %>%   #Showering or taking a bath
+  dplyr::rename(exp_groom=expect_c) %>%  #Grooming - such as brushing teeth or combing your hair
+  dplyr::rename(exp_dress=expect_d) %>%  #Getting dressed (putting on clothes)
+  dplyr::rename(exp_toil=expect_e) %>%   #Using a toilet
+  dplyr::rename(exp_bed=expect_f) %>%    #Moving from a bed to a chair on the other side of the room
+  dplyr::rename(exp_clean=expect_g) %>%  #Cleaning your home or living space
+  dplyr::rename(exp_money=expect_h) %>%  #Managing money (even if you can't pay all bills)
+  dplyr::rename(exp_mobile=expect_i) %>% #Driving a car or taking public transportation 
+  dplyr::rename(exp_cook=expect_j) %>%   #Cooking or preparing meals
+  dplyr::rename(exp_shop=expect_k) %>%   #Shopping for items you need
+  dplyr::rename(exp_meds=expect_l) %>%   #Taking medications in the correct dosage at the correct time
+  dplyr::rename(exp_phone=expect_m)      #Using a telephone
+
+# Calculating how many of the I/ADLs most people expected to be able to do in 6 months.
+ n_iadls<-dat %>%
+            select(starts_with("osear_2_"))  %>%
+              dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
+                  rowwise() %>%
+                      dplyr::mutate(n_expects=sum(c_across(cols=everything()))) %>%
+                          select(n_expects)
+ 
+dat<-bind_cols(dat, exp_ADLs, n_iadls) 
+rm(exp_ADLs, n_iadls) 
 ```
 
 ```{r important I/ADLs, include=FALSE, echo=FALSE}
+# Now I'm going to read the same list of activities, but this time I want to know how important performing each activity without help is
+# for your personal satisfaction witht your life in 6 moths.  Remember, the question is: 
+# "How important is it to me that I can do this activity without help 6 months from now?"
 
+
+# dat[which(is.na(dat$osear_3_a)), "id"] --> Again, 2011, 2014, and 2015 - the same 3 from Utah are missing.            
+
+imp_ADLs<-dat %>%
+            select(starts_with("osear_3_"))  %>%
+            rename_with(~str_replace(., "osear_3", "important"), everything()) %>%
+                  mutate(across(everything(), ~factor(.x))) %>%
+                          mutate(across(everything(), ~fct_recode(.x, Not = "0", 
+                                                                      Slightly = "1", 
+                                                                      Moderately="2", 
+                                                                      Important ="3", 
+                                                                      Very     = "4"))) ## Converts importance of I/ADLs to factors.
+
+# Re-naming the 13 variables that capture what people EXPECTED to be able to do in 6 months.
+imp_ADLs<-imp_ADLs %>%
+  dplyr::rename(imp_feed=important_a) %>%   #Eating food (someone else can prepare the food)
+  dplyr::rename(imp_bath=important_b) %>%   #Showering or taking a bath
+  dplyr::rename(imp_groom=important_c) %>%  #Grooming - such as brushing teeth or combing your hair
+  dplyr::rename(imp_dress=important_d) %>%  #Getting dressed (putting on clothes)
+  dplyr::rename(imp_toil=important_e) %>%   #Using a toilet
+  dplyr::rename(imp_bed=important_f) %>%    #Moving from a bed to a chair on the other side of the room
+  dplyr::rename(imp_clean=important_g) %>%  #Cleaning your home or living space
+  dplyr::rename(imp_money=important_h) %>%  #Managing money (even if you can't pay all bills)
+  dplyr::rename(imp_mobile=important_i) %>% #Driving a car or taking public transportation 
+  dplyr::rename(imp_cook=important_j) %>%   #Cooking or preparing meals
+  dplyr::rename(imp_shop=important_k) %>%   #Shopping for items you need
+  dplyr::rename(imp_meds=important_l) %>%   #Taking medications in the correct dosage at the correct time
+  dplyr::rename(imp_phone=important_m)      #Using a telephone
+
+# Calculating how many of the I/ADLs most people expected to be able to do in 6 months.
+ n_imp<-dat %>%
+            select(starts_with("osear_3_"))  %>%
+              dplyr::mutate(across(everything(), ~ifelse(.x >2, 1, 0))) %>%
+                  rowwise() %>%
+                      dplyr::mutate(n_important=sum(c_across(cols=everything()))) %>%
+                          select(n_important)
+
+dat<-bind_cols(dat, imp_ADLs, n_imp) 
+rm(imp_ADLs, n_imp)  
 ```
+
