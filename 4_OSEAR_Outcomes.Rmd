@@ -19,26 +19,88 @@ library(janitor)
 
 ```{r 6 mo ADLs/IADLs performed independently, include=FALSE, echo=FALSE}
 
+#	“Independence” means without ANY supervision, direction or active personal assistance, except as noted below.
+#	When asking these questions, please ask about the patient’s ability to do below activities TODAY.
+
+ADLs_6mo<-dat %>%
+            select(starts_with("adl_a_")) %>%
+            rename_with(~str_replace(., "adl_a", "mo6"), everything()) 
+
+ADLs_6mo_fct<- ADLs_6mo %>%
+                  mutate(across(everything(), ~factor(.x))) %>%
+                          mutate(across(everything(), ~fct_recode(.x, Independent = "1", 
+                                                                      Dependent  = "0"))) ## This converts all the ADLs at 6 mo to factors
+
+IADLs_6mo<-dat %>%
+            select(starts_with("iadl_")) %>%                                                # This initial select statement grabbed some columns I didn't need
+            rename_with(~str_replace(., "iadl_[:alpha:]_", "mo6_"), everything()) %>%
+              select(mo6_telephone:mo6_finances)                                            # Keeping only what I need here.
+
+IADLs_6mo_fct<-IADLs_6mo
+colnames(IADLs_6mo_fct) <- paste0(colnames(IADLs_6mo), "_fct")
+
+IADLs_6mo_fct<-IADLs_6mo_fct %>%
+                    dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
+                      mutate(across(everything(), ~factor(.x))) %>%
+                          mutate(across(everything(), ~fct_recode(.x, Independent = "1", 
+                                                                      Dependent  = "0"))) ## Converts all IADLs to factors, only independent if #1 is checked
+
+
+# Now we run into the issue of the ADLs and IADLs I asked about at discharge and at follow-up not matching. 
+# The 12 that were asked about during BOTH interviews are as follows.
+# ADLS:  bathing, dressing, toilet, transfer, feeding
+# IADLS: Telephone, shopping, food prep , housekeeping, transport, medications, money
+
+# Calculating how many of the I/ADLs most people expected to be able to do in 6 months.
+
+n_6mo_independent<-cbind(ADLs_6mo, IADLs_6mo) %>%
+                        select(-mo6_continence, -mo6_laundry)
+
+n_6mo_independent<-n_6mo_independent %>%
+                dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
+                  rowwise() %>%
+                      dplyr::mutate(n_6mo_performed=sum(c_across(cols=everything()))) %>%
+                          select(n_6mo_performed)
+ 
+
+# Merging ADLs and IADLs performed independently (as factors) at 6 months
+iadls_6mo<-cbind(ADLs_6mo, IADLs_6mo_fct, n_6mo_independent)
+rm(ADLs_6mo, ADLs_6mo_fct, IADLs_6mo, IADLs_6mo_fct, n_6mo_independent)  #cleanup 
 ```
 
-```{r 6 mo perceived health, include=FALSE, echo=FALSE}
+```{r 6 mo EQ5D including perceived health, include=FALSE, echo=FALSE}
+
+##First thing we need to do is re-code the variable capturing who was answering this question: 
+
+dat<-dat %>%
+      dplyr::rename(eqol_6mo_source=p4_eqol_source) %>%
+        mutate(eqol_6mo_source=ifelse(eqol_6mo_source==1, 1, 0)) %>%
+             mutate(eqol_6mo_source=factor(eqol_6mo_source)) %>%
+                          mutate(eqol_6mo_source=fct_recode(eqol_6mo_source, Patient = "1", 
+                                                                             Proxy = "0"))
+dat<-dat %>%
+    select(-p4_eqol_source) %>%
+        rename_with(~str_replace(., "adl_a", "mo6"), everything()) 
+
+
+p4_eqol_notdone             p4_eqol_mobility            p4_eqol_selfcare           
+p5_eqol_activities          p5_eqol_pain                p5_eqol_anxiety             p6_eqol_health              
+
+
+p4_eqol_mobility_pxy       
+p4_eqol_selfcare_pxy        p5_eqol_activities_pxy      p5_eqol_pain_pxy            p5_eqol_anxiety_pxy         p6_eqol_health_pxy
+
+# The ones ending in "health" are the VAS.
 
 ```
 
 ```{r 6 mo WHO-QoL BREF score, include=FALSE, echo=FALSE}
-
-```
-
-```{r # & % of Expectations met, include=FALSE, echo=FALSE}
-
-```
-
-```{r # & % of IMPORTANT Expectations met, include=FALSE, echo=FALSE}
-
-```
-
-```{r Are expectations fulfilled?, include=FALSE, echo=FALSE}
-
+osear_6mo1_qol              osear_6mo1_satisfied       
+osear_6mo1_pain             osear_6mo1_med              osear_6mo1_enjoy            osear_6mo1_meaningful       osear_6mo1_concentrate     
+osear_6mo1_safe             osear_6mo1_physical         osear_6mo1_energy           osear_6mo1_appearance       osear_6mo1_money           
+osear_6mo1_available        osear_6mo1_leisure          osear_6mo1_around           osear_6mo1_sleep            osear_6mo1_daily           
+osear_6mo1_capacity         osear_6mo1_yourself         osear_6mo1_relationships    osear_6mo1_sex              osear_6mo1_friends         
+osear_6mo1_place            osear_6mo1_helath           osear_6mo1_transport        osear_6mo1_negative    
 ```
 
 ```{r employement status at 6 mo, include=FALSE, echo=FALSE}
@@ -54,5 +116,11 @@ table(fup$ces6_ces, useNA = "ifany")
 
 ```
 
+```{r mspss, include=FALSE, echo=FALSE}
+"osear_6mo2_mspss_done"      
+[171] "osear_6mo2_need"             "osear_6mo2_special_share"    "osear_6mo2_family_help"      "osear_6mo2_emotional"        "osear_6mo2_comfort"         
+[176] "osear_6mo2_friends_help"     "osear_6mo2_count"            "osear_6mo2_talk_family"      "osear_6mo2_share_friends"    "osear_6mo2_special_cares"   
+[181] "osear_6mo2_decisons"         "osear_6mo2_talk_friends"
+```
 
 

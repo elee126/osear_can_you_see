@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r packages, include=FALSE}
 library(tidyverse)
 library(here)
-library(plyr)
 library(dplyr, warn.conflicts = FALSE)
 library(janitor)
 library(stringr)
@@ -61,10 +60,17 @@ exp_ADLs<-exp_ADLs %>%
   dplyr::rename(exp_meds=expect_l) %>%   #Taking medications in the correct dosage at the correct time
   dplyr::rename(exp_phone=expect_m)      #Using a telephone
 
+#Now we run into the issue of the ADLs and IADLs I asked about at discharge and at follow-up not matching. 
+# The 12 that were asked about during BOTH interviews are as follows.
+# ADLS:  bathing, dressing, toilet, transfer, feeding
+# IADLS: Telephone, shopping, food prep , housekeeping, transport, medications, money
+
+
 # Calculating how many of the I/ADLs most people expected to be able to do in 6 months.
  n_iadls<-dat %>%
             select(starts_with("osear_2_"))  %>%
-              dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
+              select(-osear_2_c) %>%                                            # This drops the grooming question which is not part of the final 12
+                dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
                   rowwise() %>%
                       dplyr::mutate(n_expects=sum(c_across(cols=everything()))) %>%
                           select(n_expects)
