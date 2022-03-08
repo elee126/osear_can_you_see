@@ -5,9 +5,13 @@ date: "2/24/2022"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+## This script assumes that all code in the files:
+##            1_OSEAR_Baseline_6mo_merge.Rmd  
+##            2_OSEAR_Baseline_demographics.Rmd and
+##            3_OSEAR_Baseline_baseline_exposures.Rmd have already been run.
+## The codebook for the baseline demographic data cleaned in this script is a file in this project called: "20210306_OSEAR Baseline Codebook.csv"
+
+## Be really careful to have the most utd version of the dplyr package and check that re-coding of factors is working properly before you change the "dat" dataframe. 
 
 ```{r packages, include=FALSE}
 library(tidyverse)
@@ -72,29 +76,44 @@ rm(ADLs_6mo, ADLs_6mo_fct, IADLs_6mo, IADLs_6mo_fct, n_6mo_independent)  #cleanu
 
 ##First thing we need to do is re-code the variable capturing who was answering this question: 
 
-dat<-dat %>%
+EQ<-dat %>%
       dplyr::rename(eqol_6mo_source=p4_eqol_source) %>%
         mutate(eqol_6mo_source=ifelse(eqol_6mo_source==1, 1, 0)) %>%
              mutate(eqol_6mo_source=factor(eqol_6mo_source)) %>%
                           mutate(eqol_6mo_source=fct_recode(eqol_6mo_source, Patient = "1", 
                                                                              Proxy = "0"))
-dat<-dat %>%
-    select(-p4_eqol_source) %>%
-        rename_with(~str_replace(., "adl_a", "mo6"), everything()) 
 
+# The variable names ending in "health" are the VAS.
 
-p4_eqol_notdone             p4_eqol_mobility            p4_eqol_selfcare           
-p5_eqol_activities          p5_eqol_pain                p5_eqol_anxiety             p6_eqol_health              
+# It doesn't look like Victor included the EQ-5D 5-digit codes or the index values in this dataset. 
+# I'll create the 5-digit codes and then see if I need to calculate the index values or if that's already been done. 
 
+EQ<-dat %>%
+    select(contains("_eqol_"), eqol_6mo_source) %>%
+        select(p4_eqol_mobility:eqol_6mo_source) %>%
+        rename_with(~str_replace(., "p[:digit:]_", ""), everything()) %>%
+        mutate(eqol_5d_code=ifelse(
+                                eqol_6mo_source=="Patient", 
+                                    paste0(eqol_mobility, eqol_selfcare, eqol_activities, eqol_pain, eqol_anxiety),
+                                    paste0(eqol_selfcare_pxy, eqol_activities_pxy, eqol_pain_pxy, eqol_anxiety_pxy))) %>%
+        mutate(eqol_VAS=ifelse(
+            eqol_6mo_source=="Patient",
+              eqol_health, NA ))
 
-p4_eqol_mobility_pxy       
-p4_eqol_selfcare_pxy        p5_eqol_activities_pxy      p5_eqol_pain_pxy            p5_eqol_anxiety_pxy         p6_eqol_health_pxy
+##Note, there's some clean-up to do on the eqol_5d_code values.  Some only contain 4 digits, some "NANANAN" crap, etc. 
+dat<-cbind(dat, EQ) 
 
-# The ones ending in "health" are the VAS.
+rm(EQ)
 
 ```
 
 ```{r 6 mo WHO-QoL BREF score, include=FALSE, echo=FALSE}
+
+WHO<-dat %>%
+  select(starts_with("osear_6mo1_")) %>%
+        rename_with(~str_replace(., "osear_6mo1", "whoqol"), everything())
+
+
 osear_6mo1_qol              osear_6mo1_satisfied       
 osear_6mo1_pain             osear_6mo1_med              osear_6mo1_enjoy            osear_6mo1_meaningful       osear_6mo1_concentrate     
 osear_6mo1_safe             osear_6mo1_physical         osear_6mo1_energy           osear_6mo1_appearance       osear_6mo1_money           

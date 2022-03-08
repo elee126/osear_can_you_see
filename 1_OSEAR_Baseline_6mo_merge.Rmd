@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r packages, include=FALSE}
 library(tidyverse)
 library(here)
-library(plyr)
 library(dplyr)
 library(janitor)
 ```

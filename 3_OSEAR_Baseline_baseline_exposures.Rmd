@@ -4,18 +4,19 @@ author: "Alison E. Turnbull"
 date: "11/18/2021"
 output: html_document
 ---
+## This script assumes that all code in the files 1_OSEAR_Baseline_6mo_merge.Rmd and 2_OSEAR_Baseline_demographics.Rmd have already been run.
+## The codebook for the baseline demographic data cleaned in this script is a file in this project called: "20210306_OSEAR Baseline Codebook.csv"
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+## This is also where you need to be really careful to have the most utd version of the dplyr package and check that re-coding of factors in the 3rd chunk is
+## working properly before you change the "dat" dataframe. 
 
 ```{r packages, include=FALSE}
 library(tidyverse)
 library(here)
-library(dplyr, warn.conflicts = FALSE)
+library(dplyr)
 library(janitor)
-library(stringr)
 ```
+
 
 ```{r expected health, include=FALSE, echo=FALSE}
 
@@ -25,7 +26,7 @@ library(stringr)
 
 dat<-dplyr::rename(dat, exp_VAS=osear_1)
 # quantile(dat$exp_VAS, na.rm = TRUE)
-hist(dat$exp_VAS, na.rm=TRUE)
+# chist(dat$exp_VAS, na.rm=TRUE)
 ```
 
 ```{r expected I/ADLs, include=FALSE, echo=FALSE}
