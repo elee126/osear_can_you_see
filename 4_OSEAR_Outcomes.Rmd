@@ -74,23 +74,19 @@ rm(ADLs_6mo, ADLs_6mo_fct, IADLs_6mo, IADLs_6mo_fct, n_6mo_independent)  #cleanu
 
 ```{r 6 mo EQ5D including perceived health, include=FALSE, echo=FALSE}
 
-##First thing we need to do is re-code the variable capturing who was answering this question: 
-
-EQ<-dat %>%
-      dplyr::rename(eqol_6mo_source=p4_eqol_source) %>%
-        mutate(eqol_6mo_source=ifelse(eqol_6mo_source==1, 1, 0)) %>%
-             mutate(eqol_6mo_source=factor(eqol_6mo_source)) %>%
-                          mutate(eqol_6mo_source=fct_recode(eqol_6mo_source, Patient = "1", 
-                                                                             Proxy = "0"))
-
 # The variable names ending in "health" are the VAS.
 
 # It doesn't look like Victor included the EQ-5D 5-digit codes or the index values in this dataset. 
 # I'll create the 5-digit codes and then see if I need to calculate the index values or if that's already been done. 
 
 EQ<-dat %>%
-    select(contains("_eqol_"), eqol_6mo_source) %>%
-        select(p4_eqol_mobility:eqol_6mo_source) %>%
+    select(contains("eqol_")) %>%
+        select(p4_eqol_source, p4_eqol_mobility:p5_eqol_anxiety_pxy) %>%
+          dplyr::rename(eqol_6mo_source=p4_eqol_source) %>%
+              mutate(eqol_6mo_source=ifelse(eqol_6mo_source==1, 1, 0)) %>%
+                  mutate(eqol_6mo_source=factor(eqol_6mo_source)) %>%
+                          mutate(eqol_6mo_source=fct_recode(eqol_6mo_source, Patient = "1", 
+                                                                             Proxy = "0"))  %>%
         rename_with(~str_replace(., "p[:digit:]_", ""), everything()) %>%
         mutate(eqol_5d_code=ifelse(
                                 eqol_6mo_source=="Patient", 
@@ -108,18 +104,214 @@ rm(EQ)
 ```
 
 ```{r 6 mo WHO-QoL BREF score, include=FALSE, echo=FALSE}
+# Scoring instructions from the 1996 version 
 
+# The WHOQOL-BREF (Field Trial Version) produces a quality of life profile. It is possible to derive four domain scores. 
+
+# There are also two items that are examined separately: question 1 asks about an individual's overall perception of quality of life and question 2 asks about an individual's overall perception of their health. 
+
+# The four domain scores denote an individual's perception of quality of life in each particular domain. Domain scores are scaled in a positive direction (i.e. higher scores denote higher quality of life). The mean score of items within each domain is used to calculate the domain score. Mean scores are then multiplied by 4 in order to make domain scores comparable with the scores used in the WHOQOL-100. 
+
+# Explicit instructions for checking and cleaning data, and for computing domain scores, are given in Table 3. 
+# A method for the manual calculation of individual scores is given on page 1 of the WHOQOL-BREF assessment form. The method for converting raw scores to transformed scores when using this method is given in Table 4, on page 11 of these instructions. 
+
+# The first transformation method converts scores to range between 4-20, comparable with the WHOQOL-100. 
+# The second transformation method converts domain scores to a 0-100 scale.
+
+# Where more than 20% of data is missing from a assessment, the assessment should be discarded (see Step 4 in Table 3). Where an item is missing, the mean of other items in the domain is substituted.
+
+#  Where more than two items are missing from the domain, the domain score should not be calculated (with the exception of domain 3, where the domain should only be calculated if < 1 item is missing)
+
+## Step 1: Re-code the variable names.  Check how many people have missing data, and ensure the range for all values is 1 --> 5. 
 WHO<-dat %>%
-  select(starts_with("osear_6mo1_")) %>%
-        rename_with(~str_replace(., "osear_6mo1", "whoqol"), everything())
+  select(starts_with("osear_6mo1_"), id) %>%
+        rename_with(~str_replace(., "osear_6mo1", "whoqol"), everything()) %>%
+          select(id, whoqol_qol:whoqol_negative)
+
+# WHO %>% summarise_if(is.numeric, max, na.rm=TRUE)   # Yup, all values <5
+
+# WHO %>% summarise_if(is.numeric, min, na.rm=TRUE)   # Minimum value = 1
+
+WHO<-WHO %>%
+      mutate(missings=rowSums(is.na(.)))
+
+WHO_missings<-WHO %>%
+  filter(missings>0 & missings<26)   ## Ok, there are two people (2020 and 3095) who are missing lots of responses and will have to be dropped. 
+                                     ## And then there are 5 people (2026, 3013, 3034, 3056, 3066) who only skipped one question, so we can impute.
 
 
-osear_6mo1_qol              osear_6mo1_satisfied       
-osear_6mo1_pain             osear_6mo1_med              osear_6mo1_enjoy            osear_6mo1_meaningful       osear_6mo1_concentrate     
-osear_6mo1_safe             osear_6mo1_physical         osear_6mo1_energy           osear_6mo1_appearance       osear_6mo1_money           
-osear_6mo1_available        osear_6mo1_leisure          osear_6mo1_around           osear_6mo1_sleep            osear_6mo1_daily           
-osear_6mo1_capacity         osear_6mo1_yourself         osear_6mo1_relationships    osear_6mo1_sex              osear_6mo1_friends         
-osear_6mo1_place            osear_6mo1_helath           osear_6mo1_transport        osear_6mo1_negative    
+
+# *****************************************************************************************************************************************************
+
+## Step 2: Reverse 3 negatively phrased questions: #3, 4, and 26  (see below - these are questions about pain, medical treatment, and negative feelings)
+
+WHO <- WHO %>%
+          mutate_at(c("whoqol_pain", "whoqol_med", "whoqol_negative"), ~6-.)
+
+
+# *****************************************************************************************************************************************************
+
+## Step 3: Compute domain scores
+
+# Domain 1 = Physical Health: Questions 3, 4, 10, 15, 16, 17, and 18
+WHO<-WHO %>%
+    rowwise() %>%
+      mutate(whoqol_d1=mean(c(whoqol_pain, whoqol_med, whoqol_energy, whoqol_around, whoqol_sleep, whoqol_daily, whoqol_capacity),  na.rm=TRUE)) %>%
+      mutate(whoqol_d1=whoqol_d1*4) %>%
+      mutate(whoqol_d1=ceiling(whoqol_d1)) %>%
+          mutate(whoqol_d1_100 = case_when(
+              whoqol_d1 == 4 ~ 0,
+              whoqol_d1 == 5 ~ 6,
+              whoqol_d1 == 6 ~ 13,
+              whoqol_d1 == 7 ~ 19,
+              whoqol_d1 == 8 ~ 25,
+              whoqol_d1 == 9 ~ 31,
+              whoqol_d1 == 10 ~ 38,
+              whoqol_d1 == 11 ~ 44,
+              whoqol_d1 == 12 ~ 50,
+              whoqol_d1 == 13 ~ 56,
+              whoqol_d1 == 14 ~ 63,
+              whoqol_d1 == 15 ~ 69, 
+              whoqol_d1 == 16 ~ 75,
+              whoqol_d1 == 17 ~ 81,
+              whoqol_d1 == 18 ~ 88,
+              whoqol_d1 == 19 ~ 94,
+              whoqol_d1 == 20 ~ 100)
+              )
+          
+# Domain 2 = Psychological: Questions 5, 6, 7, 11, 19, and 26
+WHO<-WHO %>%
+    rowwise() %>%
+      mutate(whoqol_d2=mean(c(whoqol_enjoy, whoqol_meaningful, whoqol_concentrate, whoqol_appearance, whoqol_yourself, whoqol_negative),  na.rm=TRUE)) %>%
+      mutate(whoqol_d2=whoqol_d2*4) %>%
+      mutate(whoqol_d2=ceiling(whoqol_d2)) %>%
+          mutate(whoqol_d2_100 = case_when(
+              whoqol_d2 == 4 ~ 0,
+              whoqol_d2 == 5 ~ 6,
+              whoqol_d2 == 6 ~ 13,
+              whoqol_d2 == 7 ~ 19,
+              whoqol_d2 == 8 ~ 25,
+              whoqol_d2 == 9 ~ 31,
+              whoqol_d2 == 10 ~ 38,
+              whoqol_d2 == 11 ~ 44,
+              whoqol_d2 == 12 ~ 50,
+              whoqol_d2 == 13 ~ 56,
+              whoqol_d2 == 14 ~ 63,
+              whoqol_d2 == 15 ~ 69, 
+              whoqol_d2 == 16 ~ 75,
+              whoqol_d2 == 17 ~ 81,
+              whoqol_d2 == 18 ~ 88,
+              whoqol_d2 == 19 ~ 94,
+              whoqol_d2 == 20 ~ 100)
+              )
+
+
+# Domain 3 = Social relationships: Questions 20, 21, and 22
+
+WHO<-WHO %>%
+    rowwise() %>%
+      mutate(whoqol_d3=mean(c(whoqol_relationships, whoqol_sex, whoqol_friends),  na.rm=TRUE)) %>%
+      mutate(whoqol_d3=whoqol_d3*4) %>%
+      mutate(whoqol_d3=ceiling(whoqol_d3)) %>%
+          mutate(whoqol_d3_100 = case_when(
+              whoqol_d3 == 4 ~ 0,
+              whoqol_d3 == 5 ~ 6,
+              whoqol_d3 == 6 ~ 13,
+              whoqol_d3 == 7 ~ 19,
+              whoqol_d3 == 8 ~ 25,
+              whoqol_d3 == 9 ~ 31,
+              whoqol_d3 == 10 ~ 38,
+              whoqol_d3 == 11 ~ 44,
+              whoqol_d3 == 12 ~ 50,
+              whoqol_d3 == 13 ~ 56,
+              whoqol_d3 == 14 ~ 63,
+              whoqol_d3 == 15 ~ 69, 
+              whoqol_d3 == 16 ~ 75,
+              whoqol_d3 == 17 ~ 81,
+              whoqol_d3 == 18 ~ 88,
+              whoqol_d3 == 19 ~ 94,
+              whoqol_d3 == 20 ~ 100)) 
+
+# 2026 3034 3066 - didn't answer the question about sex in this section and should not be scored according to scoring instructions. 
+missing_social<-c(2026, 3034, 3066)
+WHO[which(WHO$id %in% missing_social), "whoqol_d3"]<-NA
+WHO[which(WHO$id %in% missing_social), "whoqol_d3_100"]<-NA
+
+
+# Domain 4 = Environment: Questions 8, 9, 12, 13, 14, 23, 24, and 25
+WHO<-WHO %>%
+    rowwise() %>%
+      mutate(whoqol_d4=mean(c(whoqol_safe, whoqol_physical, whoqol_money, whoqol_available, whoqol_leisure, whoqol_place, whoqol_helath, whoqol_transport),  na.rm=TRUE)) %>%
+      mutate(whoqol_d4=whoqol_d4*4) %>%
+      mutate(whoqol_d4=ceiling(whoqol_d4)) %>%
+          mutate(whoqol_d4_100 = case_when(
+              whoqol_d4 == 4 ~ 0,
+              whoqol_d4 == 5 ~ 6,
+              whoqol_d4 == 6 ~ 13,
+              whoqol_d4 == 7 ~ 19,
+              whoqol_d4 == 8 ~ 25,
+              whoqol_d4 == 9 ~ 31,
+              whoqol_d4 == 10 ~ 38,
+              whoqol_d4 == 11 ~ 44,
+              whoqol_d4 == 12 ~ 50,
+              whoqol_d4 == 13 ~ 56,
+              whoqol_d4 == 14 ~ 63,
+              whoqol_d4 == 15 ~ 69, 
+              whoqol_d4 == 16 ~ 75,
+              whoqol_d4 == 17 ~ 81,
+              whoqol_d4 == 18 ~ 88,
+              whoqol_d4 == 19 ~ 94,
+              whoqol_d4 == 20 ~ 100)) 
+
+## Double checking that the people with missing data are being scored correctly 
+
+WHO[which(WHO$missings>1 & WHO$missings<26), c("whoqol_d1", "whoqol_d2", "whoqol_d3", "whoqol_d4", "whoqol_d1_100", "whoqol_d2_100", "whoqol_d3_100", "whoqol_d4_100")] <- NA
+
+WHO[which(WHO$missings>0 & WHO$missings<26), c("id", "missings", "whoqol_d1", "whoqol_d2", "whoqol_d3", "whoqol_d4", "whoqol_d1_100", "whoqol_d2_100", "whoqol_d3_100", "whoqol_d4_100")]
+
+### Cleaning up
+
+WHO<-WHO %>%
+    select(-c(id, missings))
+
+dat<-cbind(dat, WHO)
+
+rm(WHO, WHO_missings, missing_social)
+
+
+# *************** TEXT OF QUESTIONNAIRE ***************************************************************************************************************
+# The following questions ask how you feel about your quality of life, health, or other areas of your life.  I will read each question to you, along with the response options.  Please choose the answer that appears most appropriate.  If you are unsure about which response to give to a question, the first response you think of is often the best one. 
+# 
+# Please keep in mind your standards, hopes, pleasures and concerns.  We ask that you think about your life in the last four weeks.
+# 
+# 
+# 1. How would you rate your quality of life?
+# 2. How satisfied are you with your health?
+# 3. To what extent do you feel that physical pain prevents you from doing what you need to do?
+# 4. How much do you need any medical treatment to function in your daily life?
+# 5. How much do you enjoy life?
+# 6. To what extent do you feel your life to be meaningful?
+# 7. How well are you able to concentrate? 
+# 8. How safe do you feel in your daily life?
+# 9. How healthy is your physical environment?
+# 10. Do you have enough energy for everyday life?
+# 11. Are you able to accept your bodily appearance?
+# 12. Do you have enough money to meet your needs?
+# 13. How available to you is the information that you need in your day-to-day life?
+# 14. To what extent do you have the opportunity for leisure activities?
+# 15. How well are you able to get around?
+# 16. How satisfied are you with your sleep?
+# 17. How satisfied are you with your ability to perform your daily living activities?
+# 18. How satisfied are you with your capacity for work?
+# 19. How satisfied are you with yourself?
+# 20. How satisfied are you with your personal relationships?
+# 21. How satisfied are you with your sex life?
+# 22. How satisfied are you with the support you get from your friends?
+# 23. How satisfied are you with the conditions of your living place?
+# 24. How satisfied are you with your access to health services?
+# 25. How satisfied are you with your transport?
+# 26. How often do you have negative feelings such as blue mood, despair, anxiety, depression?
+
 ```
 
 ```{r employement status at 6 mo, include=FALSE, echo=FALSE}
