@@ -1,0 +1,40 @@
+---
+title: "5_Finalizing dataset for analysis"
+author: "Alison E. Turnbull"
+date: "3/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## This script assumes that all code in the files:
+##            1_OSEAR_Baseline_6mo_merge.Rmd  
+##            2_OSEAR_Baseline_demographics.Rmd 
+##            3_OSEAR_Baseline_baseline_exposures.Rmd and
+##            4_OSEAR_Outcomes.Rmd have already been run.
+## The codebook for the baseline demographic data cleaned in this script is a file in this project called: "20210306_OSEAR Baseline Codebook.csv"
+
+## Be really careful to have the most utd version of the dplyr package and check that re-coding of factors is working properly before you change the "dat" dataframe. 
+
+```{r packages, include=FALSE}
+library(tidyverse)
+library(here)
+library(plyr)
+library(dplyr)
+library(janitor)
+```
+
+
+```{r demographics, include=FALSE, echo=FALSE}
+
+```
+
+```{r exposures, include=FALSE, echo=FALSE}
+
+```
+
+```{r outcomes, include=FALSE, echo=FALSE}
+
+```
