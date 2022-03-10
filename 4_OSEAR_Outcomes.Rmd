@@ -322,16 +322,48 @@ rm(WHO, WHO_missings, missing_social)
 # "Which best describes your current employment situation?"
 # The one exception is that "retired or disabled" is coded as "0" for ces6_ces
 
-table(fup$ces6_ces, useNA = "ifany")
+# table(dat$ces6_ces, useNA = "ifany")
 
-
+ dat$working_6mo <- 0
+ dat$working_6mo[dat$ces6_ces %in% c(1, 2, 5, 8, 9, 10, 11, 15)] <- 1
+ dat$sickleave_6mo <- 0
+ dat$sickleave_6mo[dat$ces6_ces %in% c(3, 4)] <- 1
+ dat$retired_6mo <- 0
+ dat$retired_6mo[dat$ces6_ces %in% c(0, 12)] <- 1
+ dat$disability_6mo <- 0
+ dat$disability_6mo[dat$ces6_ces %in% c(13, 14)] <- 1
+ dat$unemployed_6mo <- 0
+ dat$unemployed_6mo[dat$ces6_ces %in% c(6, 7)] <- 1
+ dat$employment_6mo.unknown <- 0
+ dat$employment_6mo.unknown[dat$working_6mo == 0 & dat$sickleave_6mo == 0 & dat$retired_6mo == 0 & 
+                       dat$disability_6mo == 0 & dat$unemployed_6mo == 0] <- 1
 ```
 
 ```{r mspss, include=FALSE, echo=FALSE}
-"osear_6mo2_mspss_done"      
-[171] "osear_6mo2_need"             "osear_6mo2_special_share"    "osear_6mo2_family_help"      "osear_6mo2_emotional"        "osear_6mo2_comfort"         
-[176] "osear_6mo2_friends_help"     "osear_6mo2_count"            "osear_6mo2_talk_family"      "osear_6mo2_share_friends"    "osear_6mo2_special_cares"   
-[181] "osear_6mo2_decisons"         "osear_6mo2_talk_friends"
+
+# For this variables see \\homer\needham\Dale\Studies & Projects\APICS\CRFs\CRF Packets\Baseline\APICS_Form1_Bsln interview_10.1.20.docx
+# Scoring information here: https://help.greenspacehealth.com/article/92-perceived-social-support-mspss
+
+
+# osear_6mo2_need:osear_6mo2_talk_friends = mspss items at 6 month follow-up, score for each question ranges from 1-7
+
+mspss_6mo<-dat %>%
+            select(osear_6mo2_need:osear_6mo2_talk_friends)  
+
+
+# Figure out how much missing data we face (none!) and then compute total score, mean score, and subscales for significant other, family, and friends.  
+mspss_6mo <- mspss_6mo %>%
+            rowwise() %>%
+            dplyr::mutate(
+              n_missing = sum(is.na(c_across(osear_6mo2_need:osear_6mo2_talk_friends))), 
+              mspss_6mo_total = sum(c_across(osear_6mo2_need:osear_6mo2_talk_friends)), 
+              mspss_6mo_mean = mspss_6mo_total/12, 
+              mspss_6mo_so = sum(osear_6mo2_need, osear_6mo2_special_share, osear_6mo2_comfort, osear_6mo2_special_cares)/4, 
+              mspss_6mo_fam = sum(osear_6mo2_family_help, osear_6mo2_emotional, osear_6mo2_talk_family, osear_6mo2_decisons)/4,
+              mspss_6mo_fr = sum(osear_6mo2_friends_help, osear_6mo2_count, osear_6mo2_share_friends, osear_6mo2_talk_friends)/4) %>%
+                select(mspss_6mo_total, mspss_6mo_mean, mspss_6mo_so, mspss_6mo_fam, mspss_6mo_fr) %>%
+                    mutate_if(is.numeric, round, 1)
+
 ```
 
 
