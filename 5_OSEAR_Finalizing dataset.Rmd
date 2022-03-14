@@ -28,6 +28,20 @@ library(janitor)
 
 
 ```{r demographics, include=FALSE, echo=FALSE}
+demographics<-dat %>%
+                select(id, status_6mo, age, sex, race, hispanic, edu, 
+                       working, sickleave, retired, disability, unemployed, baseline_employment.unknown,
+                          income, adi_dec, adi_perc, 
+                            insur_private, insur_Mcaid, insur_Mcare, insur_None,
+                              adm_dx, sx, covid, ards, depress, anxiety, cfs,
+                                mspss_total, mspss_mean, mspss_so, mspss_fam, mspss_fr,
+                                  cd_score,
+                                    dc_adl_bath, dc_adl_dress, dc_adl_toil, dc_adl_bed, dc_adl_cont, dc_adl_feed)
+
+demographics<-demographics %>%
+                clean_names()
+
+colSums(is.na(demographics))
 
 ```
 

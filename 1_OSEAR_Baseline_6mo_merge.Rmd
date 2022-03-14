@@ -230,7 +230,7 @@ fup <- fup %>%
 
 dat<-left_join(baseline, fup, by="id")
 
-rm(APICS_6mo, COVID_6mo, victor_email)
+rm(APICS_6mo, COVID_6mo, victor_email, baseline, fup)
 
 ```
 

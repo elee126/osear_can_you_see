@@ -251,6 +251,10 @@ pre_covid<-c(1008:1022, 2011:2028, 3001:3056, 5007:5018)
 #  When from_9_2_1 == 1, the patient had COVID and when from_9_2_1 == 0 they did not. 
     dat$covid[dat$from_9_2_1==1]<- "Yes"
     dat$covid[dat$from_9_2_1==0]<- "No"
+    
+# Emailed Victor about 2031.  He emailed folks at IMC.  Jenny King replied on 12/2/2021 and confirmed that participant 2031 was COVID + at enrollment.
+    dat$covid[dat$id==2031]<-"Yes"
+    
 ```
 
 ```{r ARDS, include=FALSE, echo=FALSE}
@@ -386,7 +390,7 @@ dat <-dat %>%
 # Taken from APICS_Form_6_Hospdc.  Instructions: 
 # “Independence” means without ANY supervision, direction or active personal assistance, except as noted below
 #  Answer these questions using ONLY data available in the EMR.
-# 1 was checkd for Independent and 0 for Dependent
+# 1 was checked for Independent and 0 for Dependent
 
 #Bathing
 dat <- dat %>%
