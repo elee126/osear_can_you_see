@@ -41,14 +41,48 @@ demographics<-dat %>%
 demographics<-demographics %>%
                 clean_names()
 
-colSums(is.na(demographics))
+# colSums(is.na(demographics))
 
 ```
 
 ```{r exposures, include=FALSE, echo=FALSE}
+exposures<-dat %>%
+    select(id, status_6mo, exp_VAS, 
+                exp_feed, exp_bath, exp_dress, exp_toil, exp_bed, exp_clean, exp_money, exp_mobile, exp_cook, exp_shop, exp_meds, exp_phone, n_expects,
+                  n_important, imp_feed, imp_bath, imp_dress, imp_toil, imp_bed, imp_clean, imp_money, imp_mobile, imp_cook, imp_shop, imp_meds, imp_phone)
 
+exposures <- exposures %>%
+  clean_names()
+
+# colSums(is.na(exposures))
 ```
 
-```{r outcomes, include=FALSE, echo=FALSE}
 
+```{r outcomes, include=FALSE, echo=FALSE}
+outcomes<-dat %>%
+      select(id, status_6mo,working_6mo, disability_6mo, employment_6mo.unknown, retired_6mo, sickleave_6mo, unemployed_6mo,
+                eqol_5d_code, eqol_6mo_source, eqol_VAS,
+                  eqol_activities, eqol_anxiety, eqol_mobility, eqol_pain, eqol_selfcare,
+                    eqol_activities_pxy, eqol_anxiety_pxy, eqol_pain_pxy, eqol_selfcare_pxy,
+                          whoqol_d1_100, whoqol_d2_100, whoqol_d3_100, whoqol_d4_100, whoqol_d1, whoqol_d2, whoqol_d3, whoqol_d4,
+                            whoqol_appearance, whoqol_around, whoqol_available, whoqol_capacity, whoqol_concentrate, whoqol_daily, whoqol_energy, 
+                            whoqol_enjoy, whoqol_friends, whoqol_helath, whoqol_leisure, whoqol_meaningful, whoqol_med, whoqol_money, whoqol_negative,
+                            whoqol_pain, whoqol_physical, whoqol_place, whoqol_relationships, whoqol_safe, whoqol_sex, whoqol_sleep, 
+                            whoqol_transport, whoqol_yourself)
+
+outcomes<-bind_cols(outcomes, iadls_6mo, mspss_6mo)
+
+outcomes<-outcomes %>%
+    clean_names()
+
+outcomes<-dplyr::rename(outcomes, whoqol_health=whoqol_helath)
+
+# colSums(is.na(outcomes[which(outcomes$status_6mo=="alive"), ]))
+
+df<-demographics %>%
+            left_join(exposures, by=c("id", "status_6mo")) %>%
+              left_join(outcomes, by=c("id", "status_6mo"))
+
+rm(dat, iadls_6mo, mspss_6mo)
+ 
 ```

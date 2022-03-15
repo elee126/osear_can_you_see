@@ -16,7 +16,6 @@ output: html_document
 ```{r packages, include=FALSE}
 library(tidyverse)
 library(here)
-library(plyr)
 library(dplyr)
 library(janitor)
 ```
@@ -68,7 +67,7 @@ n_6mo_independent<-n_6mo_independent %>%
  
 
 # Merging ADLs and IADLs performed independently (as factors) at 6 months
-iadls_6mo<-cbind(ADLs_6mo, IADLs_6mo_fct, n_6mo_independent)
+iadls_6mo<-cbind(ADLs_6mo_fct, IADLs_6mo_fct, n_6mo_independent)
 rm(ADLs_6mo, ADLs_6mo_fct, IADLs_6mo, IADLs_6mo_fct, n_6mo_independent)  #cleanup 
 ```
 

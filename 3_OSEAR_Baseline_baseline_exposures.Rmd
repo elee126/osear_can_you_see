@@ -98,7 +98,7 @@ imp_ADLs<-dat %>%
                                                                       Important ="3", 
                                                                       Very     = "4"))) ## Converts importance of I/ADLs to factors.
 
-# Re-naming the 13 variables that capture what people EXPECTED to be able to do in 6 months.
+# Re-naming the 13 variables that capture what people felt was IMPORTANT to be able to do in 6 months.
 imp_ADLs<-imp_ADLs %>%
   dplyr::rename(imp_feed=important_a) %>%   #Eating food (someone else can prepare the food)
   dplyr::rename(imp_bath=important_b) %>%   #Showering or taking a bath
