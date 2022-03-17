@@ -20,22 +20,27 @@ library(janitor)
 
 ```{r expected health, include=FALSE, echo=FALSE}
 
-# table(is.na(dat$osear_1))               Missing for 3 - that is NOT ok. Go back and look at the paper CRFs to figure out what's up.
-# dat[which(is.na(dat$osear_1)), "id"]    2011, 2014, 2015 - Interesting... these are the first 3 from IMC. Need to follow-up.
-#                                         Note that 2011 was later lost to follow-up, but 2014 and 2015 are in the final cohort. 
+#table(is.na(dat$osear_1))                
+#dat[which(is.na(dat$osear_1)), "id"]    # Missing for 3: 2011, 2014, 2015  
+
+## Spoke with OACIS LTO team on 3/16/2022.  They sent the following file with missing data on expected health and expected I/ADLs.
+temp <- read_csv(here::here("data", "20220316_missing_IMC_exposures.csv"))
+
+## So, for all 3 participants, 2011, 2014, 2015, the VAS is 80, and they expect to do all ADLS, and IADLS indepdently
+
+dat[which(is.na(dat$osear_1)), "osear_1"]<-80
 
 dat<-dplyr::rename(dat, exp_VAS=osear_1)
 # quantile(dat$exp_VAS, na.rm = TRUE)
-# chist(dat$exp_VAS, na.rm=TRUE)
+# hist(dat$exp_VAS, na.rm=TRUE)
 ```
 
 ```{r expected I/ADLs, include=FALSE, echo=FALSE}
+# dat[which(is.na(dat$osear_2_a)), "id"]    
+
 # I am going to read a list of 13 activities.  For each activity, tell me if you expect that you'll be able to perform it *without help*
 # 6 months from now. For each activity say: "yes", "no", or "unsure."
 # Note: Yes = 1, No = 0, and Unsure = "2"
-
-# dat[which(is.na(dat$osear_2_a)), "id"] --> Again, 2011, 2014, and 2015 - the same 3 from Utah.  I have a feeling the baseline survey
-                                            #was either not collected or not entered for these 3.            
 
 exp_ADLs<-dat %>%
             select(starts_with("osear_2_"))  %>%
@@ -44,6 +49,14 @@ exp_ADLs<-dat %>%
                           mutate(across(everything(), ~fct_recode(.x, Yes = "1", 
                                                                       No  = "0", 
                                                                       Unsure="2"))) ## This converts all the expected I/ADLs to factors
+
+## Again, look at "temp" from the previous chunk. 
+## This variable was missing for 2011, 2014, and 2015.  It was then retrieved on 3/16/2022.  All 3 participants expected to do everything independently.
+exp_ADLs<-exp_ADLs %>%
+              replace(is.na(.), "Yes")
+
+# colSums(is.na(exp_ADLs))  Yup, no more missings
+
 
 ## Re-naming the 13 variables that capture what people EXPECTED to be able to do in 6 months.
 exp_ADLs<-exp_ADLs %>%
@@ -70,9 +83,10 @@ exp_ADLs<-exp_ADLs %>%
 # Calculating how many of the I/ADLs most people expected to be able to do in 6 months.
  n_iadls<-dat %>%
             select(starts_with("osear_2_"))  %>%
-              select(-osear_2_c) %>%                                            # This drops the grooming question which is not part of the final 12
-                dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
-                  rowwise() %>%
+              replace(is.na(.), 1) %>%
+                select(-osear_2_c) %>%                                            # This drops the grooming question which is not part of the final 12
+                  dplyr::mutate(across(everything(), ~ifelse(.x ==1, 1, 0))) %>%
+                    rowwise() %>%
                       dplyr::mutate(n_expects=sum(c_across(cols=everything()))) %>%
                           select(n_expects)
  
@@ -123,6 +137,6 @@ imp_ADLs<-imp_ADLs %>%
                           select(n_important)
 
 dat<-bind_cols(dat, imp_ADLs, n_imp) 
-rm(imp_ADLs, n_imp)  
+rm(imp_ADLs, n_imp, temp)  
 ```
 

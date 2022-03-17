@@ -339,7 +339,6 @@ dat <- dat %>%
 # For this variables see \\homer\needham\Dale\Studies & Projects\APICS\CRFs\CRF Packets\Baseline\APICS_Form1_Bsln interview_10.1.20.docx
 # Scoring information here: https://help.greenspacehealth.com/article/92-perceived-social-support-mspss
 
-
 # m1_:m12_ = mspss, score for each question ranges from 1-7
 
 mspss<-dat %>%

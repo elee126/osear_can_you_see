@@ -344,6 +344,14 @@ rm(WHO, WHO_missings, missing_social)
 # Scoring information here: https://help.greenspacehealth.com/article/92-perceived-social-support-mspss
 
 
+
+# 6 month MSPSS data was initally missing for subject 3061 for some reason.  Victor sent it in a separate email on 3/16/2022.
+# Need to incorporate that in first.
+
+temp <- read_csv(here::here("data", "20220316_3061 6 mos MSPSS.csv"))
+temp<-
+
+
 # osear_6mo2_need:osear_6mo2_talk_friends = mspss items at 6 month follow-up, score for each question ranges from 1-7
 
 mspss_6mo<-dat %>%
