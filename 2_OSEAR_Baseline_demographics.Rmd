@@ -142,8 +142,18 @@ dat<-dat %>%
 
 # "adi_perc"  - Percentile at the NATIONAL level of the ADI. Again, higher numbers = greater deprivation.  Missing for 3 people.  Range 1 - 100, median =39
 
+## These data were missing for participants 1025 and 1026.  Preethi spoke to research staff at BI and sent an email on 3/25/22 with the following
+## missing values for those patients. Email is in the /data folder. 
+# 1025 - state decile : 3, national percentile: 11, median income: $50,492
+# 1026 - state decile : 1, national percentile: 2   median income: $258,000
+# 
+dat$income[dat$id==1025]<-50492
+dat$adi_dec[dat$id==1025]<-3
+dat$adi_perc[dat$id==1025]<-11
 
-# All these variables are numeric and don't appear to require further cleaning. Only 3 missing values. 
+dat$income[dat$id==1026]<-258000
+dat$adi_dec[dat$id==1026]<-1
+dat$adi_perc[dat$id==1026]<-2
         
 ```
 
@@ -394,32 +404,32 @@ dat <-dat %>%
 #Bathing
 dat <- dat %>%
         mutate(dc_adl_bath=factor(adl_bath_hosp_dc, exclude=NA)) %>%
-          mutate(dc_adl_bath=fct_recode(dc_adl_bath, Indepdendent="1", 
+          mutate(dc_adl_bath=fct_recode(dc_adl_bath, Independent="1", 
                                                      Dependent ="0"))
 #Dressing
 dat <- dat %>%
         mutate(dc_adl_dress=factor(adl_dress_hosp_dc, exclude=NA)) %>%
-          mutate(dc_adl_dress=fct_recode(dc_adl_dress, Indepdendent="1", 
+          mutate(dc_adl_dress=fct_recode(dc_adl_dress, Independent="1", 
                                                        Dependent ="0"))
 #Using a toilet
 dat <- dat %>%
         mutate(dc_adl_toil=factor(adl_toil_hosp_dc, exclude=NA)) %>%
-          mutate(dc_adl_toil=fct_recode(dc_adl_toil, Indepdendent="1", 
+          mutate(dc_adl_toil=fct_recode(dc_adl_toil, Independent="1", 
                                                        Dependent ="0"))
 #Transfer (gets in and out of bed)
 dat <- dat %>%
         mutate(dc_adl_bed=factor(adl_trans_hosp_dc, exclude=NA)) %>%
-          mutate(dc_adl_bed=fct_recode(dc_adl_bed, Indepdendent="1", 
+          mutate(dc_adl_bed=fct_recode(dc_adl_bed, Independent="1", 
                                                        Dependent ="0"))
 
 #Continence
 dat <- dat %>%
         mutate(dc_adl_cont=factor(adl_cntine_hosp_dc, exclude=NA)) %>%
-          mutate(dc_adl_cont=fct_recode(dc_adl_cont, Indepdendent="1", 
+          mutate(dc_adl_cont=fct_recode(dc_adl_cont, Independent="1", 
                                                        Dependent ="0"))
 #Feeding
 dat <- dat %>%
         mutate(dc_adl_feed=factor(adl_feed_hosp_dc, exclude=NA)) %>%
-          mutate(dc_adl_feed=fct_recode(dc_adl_feed, Indepdendent="1", 
+          mutate(dc_adl_feed=fct_recode(dc_adl_feed, Independent="1", 
                                                        Dependent ="0"))
 ```

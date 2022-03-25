@@ -61,7 +61,7 @@ exposures <- exposures %>%
 ```{r outcomes, include=FALSE, echo=FALSE}
 outcomes<-dat %>%
       select(id, status_6mo,working_6mo, disability_6mo, employment_6mo.unknown, retired_6mo, sickleave_6mo, unemployed_6mo,
-                eqol_5d_code, eqol_6mo_source, eqol_VAS,
+                eqol_5d_code, eqol_6mo_source, eqol_VAS, eq_index, 
                   eqol_activities, eqol_anxiety, eqol_mobility, eqol_pain, eqol_selfcare,
                     eqol_activities_pxy, eqol_anxiety_pxy, eqol_mobility_pxy, eqol_pain_pxy, eqol_selfcare_pxy,
                           whoqol_d1_100, whoqol_d2_100, whoqol_d3_100, whoqol_d4_100, whoqol_d1, whoqol_d2, whoqol_d3, whoqol_d4,
@@ -81,7 +81,7 @@ df<-demographics %>%
             left_join(exposures, by=c("id", "status_6mo")) %>%
               left_join(outcomes, by=c("id", "status_6mo"))
 
-colSums(is.na(outcomes[which(outcomes$status_6mo=="alive"), ]))
+#colSums(is.na(outcomes[which(outcomes$status_6mo=="alive"), ]))
  
 ```
 
@@ -102,17 +102,17 @@ df_alive[which(is.na(df_alive$mo6_bathing)), "id"]
 
 
 ######################### EQOL missingness - #3208
-df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_activities)), "id"] 
-df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_mobility)), "id"] 
-df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_anxiety)), "id"]
-df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_pain)), "id"]
-df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_selfcare)), "id"]
-
-df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_activities_pxy)), "id"] 
-df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_mobility_pxy)), "id"] 
-df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_anxiety_pxy)), "id"]
-df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_pain_pxy)), "id"]
-df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_selfcare_pxy)), "id"]   #3131 is strange, but is NOT missing any data
+# df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_activities)), "id"] 
+# df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_mobility)), "id"] 
+# df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_anxiety)), "id"]
+# df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_pain)), "id"]
+# df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_selfcare)), "id"]
+# 
+# df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_activities_pxy)), "id"] 
+# df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_mobility_pxy)), "id"] 
+# df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_anxiety_pxy)), "id"]
+# df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_pain_pxy)), "id"]
+# df_alive[which(df_alive$eqol_6mo_source=="Proxy" & is.na(df_alive$eqol_selfcare_pxy)), "id"]   #3131 is strange, but is NOT missing any data
 
 table(is.na(df_alive$eqol_vas), df_alive$eqol_6mo_source)  # Missing for 2 pts who completed EQ-5D
 df_alive[which(df_alive$eqol_6mo_source=="Patient" & is.na(df_alive$eqol_vas)), c("id", "eqol_6mo_source", "eqol_vas")] #3028 and 2020
@@ -129,13 +129,20 @@ df_alive %>%
   select(starts_with("whoqol_")) %>%
       dplyr::summarise(across(everything(), ~sum(is.na(.x))))
 
-df_alive[which(is.na(df_alive$whoqol_appearance)), "id"]
-df_alive[which(is.na(df_alive$whoqol_capacity)), "id"]
-df_alive[which(is.na(df_alive$whoqol_daily)), "id"]
-df_alive[which(is.na(df_alive$whoqol_money)), "id"]
-df_alive[which(is.na(df_alive$whoqol_pain)), "id"]
-df_alive[which(is.na(df_alive$whoqol_yourself)), "id"]
+# df_alive[which(is.na(df_alive$whoqol_appearance)), "id"]
+# df_alive[which(is.na(df_alive$whoqol_capacity)), "id"]
+# df_alive[which(is.na(df_alive$whoqol_daily)), "id"]
+# df_alive[which(is.na(df_alive$whoqol_money)), "id"]
+# df_alive[which(is.na(df_alive$whoqol_pain)), "id"]
+# df_alive[which(is.na(df_alive$whoqol_yourself)), "id"]
 
 ```
 
+```{r clean up, echo=FALSE}
+coenrolled<-coenrolled$id
+osear_only<-osear_only$id
+
+rm(dat, df_alive, iadls_6mo, missings, mspss_6mo, temp, baseline_IDs, demographics, baselines, outcomes)
+
+```
 

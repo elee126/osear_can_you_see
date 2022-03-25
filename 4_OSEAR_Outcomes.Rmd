@@ -75,9 +75,6 @@ rm(ADLs_6mo, ADLs_6mo_fct, IADLs_6mo, IADLs_6mo_fct, n_6mo_independent)  #cleanu
 
 # The variable names ending in "health" are the VAS.
 
-# It doesn't look like Victor included the EQ-5D 5-digit codes or the index values in this dataset. 
-# I'll create the 5-digit codes and then see if I need to calculate the index values or if that's already been done. 
-
 EQ<-dat %>%
     select(contains("eqol_")) %>%
         select(p4_eqol_source, p4_eqol_mobility:p5_eqol_anxiety_pxy) %>%
@@ -98,7 +95,13 @@ EQ<-dat %>%
 ##Note, there's some clean-up to do on the eqol_5d_code values.  Some only contain 4 digits, some "NANANAN" crap, etc. 
 dat<-cbind(dat, EQ) 
 
-rm(EQ)
+## Reading in the EQ-5D Index values sent by Victor in March, 2022.
+
+EQ_index<-read_csv(here::here("data", "20220325_OSEAR 6 mos EQ5D Index.csv"), show_col_types = FALSE)
+
+dat<-left_join(dat, EQ_index, by="id")  
+  
+rm(EQ, EQ_index)
 
 ```
 
