@@ -1,7 +1,7 @@
 ---
 title: "3_OSEAR_Baseline_Exposures"
 author: "Alison E. Turnbull"
-date: "11/18/2021"
+date: "05/26/2022"
 output: html_document
 ---
 ## This script assumes that all code in the files 1_OSEAR_Baseline_6mo_merge.Rmd and 2_OSEAR_Baseline_demographics.Rmd have already been run.
@@ -96,7 +96,7 @@ rm(exp_ADLs, n_iadls)
 
 ```{r important I/ADLs, include=FALSE, echo=FALSE}
 # Now I'm going to read the same list of activities, but this time I want to know how important performing each activity without help is
-# for your personal satisfaction witht your life in 6 moths.  Remember, the question is: 
+# for your personal satisfaction with your life in 6 months.  Remember, the question is: 
 # "How important is it to me that I can do this activity without help 6 months from now?"
 
 

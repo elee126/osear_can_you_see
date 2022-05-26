@@ -1,7 +1,7 @@
 ---
 title: 'OSEAR: Connecting Baseline & 6 month data'
 author: "Alison E. Turnbull"
-date: "11/8/2021"
+date: "05/26/2022"
 output: html_document
 ---
 
@@ -37,6 +37,12 @@ covid2 <- read_csv(here::here("data",  "20211129_OSEAR_covid_form9.csv"))
 
 ## ADLS the patient can complete at hospital discharge
 dc_adls<- read_csv(here::here("data", "20211129_OSEAR_hosp_dc_ADLs.csv"))
+
+## APACHE II scores
+apache<-read_csv(here::here("data", "20220523_OSEAR_APACHE.csv"))
+
+## Hospital Length of stay
+los<-read_csv(here::here("data", "20220523_OSEAR Hospital LOS.csv"))
 
 ## 6 month follow-up data
 APICS_6mo <- read_csv(here::here("data", "20211108_APICS_6Mos.csv"), show_col_types = FALSE)
@@ -156,7 +162,20 @@ baseline <- baseline %>%
              select(-adl_bath_hosp_dc, -adl_dress_hosp_dc, -adl_toil_hosp_dc, -adl_trans_hosp_dc, -adl_cntine_hosp_dc, -adl_feed_hosp_dc) %>%
                      left_join(dc_adls, by="id") 
 
-rm(edu_IDs, temp, missing_gender, baseline_OSEAR_only, edu_income, ards, covid, covid2, depression, dc_adls)
+
+## Adding data on APACHE II score
+apache<-apache %>%
+          clean_names() %>%
+              dplyr::rename(id=subject_id) 
+
+baseline<-baseline %>%
+            left_join(apache, by="id")
+
+## Adding data on Hospital LOS
+baseline<-baseline %>%
+            left_join(los, by="id")
+
+rm(edu_IDs, temp, missing_gender, baseline_OSEAR_only, edu_income, ards, covid, covid2, depression, dc_adls, apache, los)
 
 
 ```

@@ -1,7 +1,7 @@
 ---
 title: "5_Finalizing dataset for analysis"
 author: "Alison E. Turnbull"
-date: "3/10/2022"
+date: "5/26/2022"
 output: html_document
 ---
 
@@ -33,7 +33,8 @@ demographics<-dat %>%
                        working, sickleave, retired, disability, unemployed, baseline_employment.unknown,
                           income, adi_dec, adi_perc, 
                             insur_private, insur_Mcaid, insur_Mcare, insur_None,
-                              adm_dx, sx, covid, ards, depress, anxiety, cfs,
+                            adl_feed, adl_bath, adl_dress, adl_toil, adl_trans, adl_housekeep, adl_money, adl_transport, adl_cook, adl_shop, adl_med, adl_phone, 
+                              adm_dx, apache, sx, covid, ards, los, depress, anxiety, cfs,
                                 mspss_total, mspss_mean, mspss_so, mspss_fam, mspss_fr,
                                   cd_score,
                                     dc_adl_bath, dc_adl_dress, dc_adl_toil, dc_adl_bed, dc_adl_cont, dc_adl_feed)
@@ -142,7 +143,7 @@ df_alive %>%
 coenrolled<-coenrolled$id
 osear_only<-osear_only$id
 
-rm(dat, df_alive, iadls_6mo, missings, mspss_6mo, temp, baseline_IDs, demographics, baselines, outcomes)
+rm(dat, df_alive, iadls_6mo, missings, mspss_6mo, temp, baseline_IDs, demographics, baselines, exposures, outcomes, pre_covid, coenrolled)
 
 ```
 

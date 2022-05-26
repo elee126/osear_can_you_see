@@ -1,7 +1,7 @@
 ---
 title: "2_OSEAR_Baseline_Demographics"
 author: "Alison E. Turnbull"
-date: "11/9/2021"
+date: "05/26/2022"
 output: html_document
 ---
 
@@ -185,6 +185,91 @@ dat <- dat %>%
 # Note that there are also variables for Champ-VA/TRICARE, Ryan White HIV/AIDS program, Worker's comp, awaiting Medicaid/Medicare approval, and others.
 
 ```
+
+
+```{r I/ADLs performed prior to the illness necessitating hospitalization, include=FALSE, echo=FALSE}
+
+#Feeding
+dat <- dat %>%
+        mutate(adl_feed=factor(adl_feed, exclude=NA)) %>%
+          mutate(adl_feed=fct_recode(adl_feed, Independent="1", 
+                                                       Dependent ="0"))
+
+#Bathing
+dat <- dat %>%
+        mutate(adl_bath=factor(adl_bath, exclude=NA)) %>%
+          mutate(adl_bath=fct_recode(adl_bath, Independent="1", 
+                                                     Dependent ="0"))
+#Dressing
+dat <- dat %>%
+        mutate(adl_dress=factor(adl_dress, exclude=NA)) %>%
+          mutate(adl_dress=fct_recode(adl_dress, Independent="1", 
+                                                       Dependent ="0"))
+#Using a toilet
+dat <- dat %>%
+        mutate(adl_toil=factor(adl_toil, exclude=NA)) %>%
+          mutate(adl_toil=fct_recode(adl_toil, Independent="1", 
+                                                       Dependent ="0"))
+#Transfer (gets in and out of bed)
+dat <- dat %>%
+        mutate(adl_trans=factor(adl_trans, exclude=NA)) %>%
+          mutate(adl_trans=fct_recode(adl_trans, Independent="1", 
+                                                       Dependent ="0"))
+
+## Now mutating the IDALs we want: Housekeeping, Money Management, Transport, Cooking, Shopping, Medications, Phone
+## These were scored 1 - 5 but I'm dichotomizing them to be Independent or Dependent. 
+## Participants are only coded as Independent if they scored a 1. 
+
+# Housekeeping 
+dat <- dat %>%
+        mutate(iadl_housekeep=ifelse(iadl_housekeep==1, 1, 0)) %>%
+        mutate(adl_housekeep=factor(iadl_housekeep, exclude=NA)) %>%
+        mutate(adl_housekeep=fct_recode(adl_housekeep, Independent="1", 
+                                                       Dependent ="0"))
+# Money
+dat <- dat %>%
+        mutate(iadl_fin=ifelse(iadl_fin==1, 1, 0)) %>%
+        mutate(adl_money=factor(iadl_fin, exclude=NA)) %>%
+        mutate(adl_money=fct_recode(adl_money, Independent="1", 
+                                                       Dependent ="0"))
+
+# Transport 
+dat <- dat %>%
+        mutate(iadl_transp=ifelse(iadl_transp==1, 1, 0)) %>%
+        mutate(adl_transport=factor(iadl_transp, exclude=NA)) %>%
+        mutate(adl_transport=fct_recode(adl_transport, Independent="1", 
+                                                       Dependent ="0"))
+
+# Cooking 
+dat <- dat %>%
+        mutate(iadl_foodprep=ifelse(iadl_foodprep==1, 1, 0)) %>%
+        mutate(adl_cook=factor(iadl_foodprep, exclude=NA)) %>%
+        mutate(adl_cook=fct_recode(adl_cook, Independent="1", 
+                                                       Dependent ="0"))
+
+# Shopping 
+dat <- dat %>%
+        mutate(iadl_shop=ifelse(iadl_shop==1, 1, 0)) %>%
+        mutate(adl_shop=factor(iadl_shop, exclude=NA)) %>%
+        mutate(adl_shop=fct_recode(adl_shop, Independent="1", 
+                                                       Dependent ="0"))
+
+# Medications 
+dat <- dat %>%
+        mutate(iadl_med=ifelse(iadl_med==1, 1, 0)) %>%
+        mutate(adl_med=factor(iadl_med, exclude=NA)) %>%
+        mutate(adl_med=fct_recode(adl_med, Independent="1", 
+                                                       Dependent ="0"))
+
+# Phone
+dat <- dat %>%
+        mutate(iadl_tel=ifelse(iadl_tel==1, 1, 0)) %>%
+        mutate(adl_phone=factor(iadl_tel, exclude=NA)) %>%
+        mutate(adl_phone=fct_recode(adl_phone, Independent="1", 
+                                                       Dependent ="0"))
+```
+
+
 
 ```{r nursing home or rehab prior in prior year, include=FALSE, echo=FALSE}
 # table(dat$hus_nursing, useNA = "ifany")  # No one had been in a nursing home
@@ -394,7 +479,7 @@ dat <-dat %>%
 # quantile(dat$cd_score, na.rm = TRUE)  So, this is completely normal to even a bit more resilient than the national average.
 ```
 
-```{r ADLs performed independently at hospital discharge, }
+```{r ADLs performed independently at hospital discharge, include=FALSE, echo=FALSE}
 # Consider patient’s status ideally on the day of hospital discharge or the closest time to hospital discharge if it is not available.
 # Taken from APICS_Form_6_Hospdc.  Instructions: 
 # “Independence” means without ANY supervision, direction or active personal assistance, except as noted below
